@@ -16,3 +16,10 @@ i2_include_plugins:
   - "windows-plugins"
   - "nscp"
 i2_custom_constants: {}
+
+# included libraries
+icinga_template_lib: "itl"
+
+# Defintion files
+constants: "constants.conf"
+zones: "zones.conf"
