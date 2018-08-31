@@ -1,3 +1,4 @@
+---
 i2_conf_dir: "/etc/icinga2"
 i2_default_constants:
   PluginDir: "{{ i2_lib_dir }}/nagios/plugins"
