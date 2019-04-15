@@ -1,0 +1,17 @@
+// {{ ansible_managed }}
+{% import 'object_attributes.j2' as attributes %}
+
+{% set library = item.value.pop('library', None) %}
+{%- if library is defined and library is not none %}
+library "{{ library }}"
+{% endif -%}
+
+{% for object_name, params in item.value.items() %}
+object {{ item.key }} "{{ object_name }}" {
+{% set vars = params.pop('variables', None) %}
+{{ attributes.attrs(params) -}}
+{%- if vars is defined and vars is not none %}
+{{ attributes.attrs(vars, 'vars.') -}}
+{% endif -%}
+}
+{% endfor %}
