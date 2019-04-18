@@ -1,5 +1,5 @@
 ---
-- name: collect all enabled features
+- name: Collect all enabled features
   become: yes
   find:
     paths: "{{ i2_features_enabled_dir }}/"
@@ -9,7 +9,7 @@
   when:
     - i2_remove_unmanaged_features
 
-- name: generate enabled feature configuration
+- name: Generate enabled feature configuration
   become: yes
   template:
     src: templates/feature-generic-template.conf.j2
@@ -22,7 +22,7 @@
   notify:
     - restart icinga2
 
-- name: set fact enabled_files
+- name: Set fact enabled_files
   set_fact:
     enabled_files: "{{ enabled_files|default([]) + [ item.path ] }}"
   loop: "{{ enabled_features.files }}"
@@ -31,12 +31,12 @@
 
 - name: Set Fact managed_features_files
   set_fact:
-    managed_feature_files: "{{ item.dest }}"
+    managed_feature_files: "{{ managed_feature_files|default([]) + [item.dest] }}"
   with_items: "{{ managed_features.results }}"
   when:
     - i2_remove_unmanaged_features
 
-- name: removing unmanaged features
+- name: Remove unmanaged features
   file:
     path: "{{ item }}"
     state: absent

@@ -5,3 +5,5 @@ i2_lib_dir: /usr/lib
 
 mysql_defaults_file: /etc/mysql/debian.cnf
 mysql_config_file: /etc/mysql/mariadb.conf.d/50-server.cnf
+
+i2_webui_mysql_schema: "/usr/share/icingaweb2/etc/schema/mysql.schema.sql"

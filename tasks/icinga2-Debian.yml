@@ -23,7 +23,7 @@
 - name: Debian - Ensure icinga2 is installed
   become: yes
   apt:
-    name: icinga2
-    state: latest
+    name: "{{ i2_package_name }}"
+    state: "{{ i2_package_ensure }}"
   notify: start icinga2
   when: i2_manage_package

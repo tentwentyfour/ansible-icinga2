@@ -1,0 +1,9 @@
+---
+- name: Icingaweb2 - Download modules from github
+  become: yes
+  git:
+    repo: "https://github.com/Icinga/icingaweb2-module-{{ item }}.git"
+    dest: "{{ i2_webui_modules_dir }}/{{ item}}"
+    update: no
+  loop: "{{ i2_webui_modules }}"
+  ignore_errors: yes

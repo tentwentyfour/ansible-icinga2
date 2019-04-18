@@ -1,5 +1,5 @@
 ---
-- name: Create conf.d directory
+- name: Create config directories to include - if any
   become: yes
   file:
     dest: "{{ i2_conf_dir }}/{{ item }}"
@@ -24,7 +24,7 @@
     path: "{{ i2_conf_dir }}/constants.conf-sample"
   register: sample_file
 
-- name: Copy original Icinga 2 config to sample
+- name: Back-up original Icinga 2 config to sample
   become: yes
   copy:
     remote_src: true
@@ -51,7 +51,7 @@
     path: "{{ i2_conf_dir }}/zones.conf-sample"
   register: zones_sample_file
 
-- name: Copy original Icinga 2 zones.conf to sample
+- name: Back-up original Icinga 2 zones.conf to sample
   become: yes
   copy:
     remote_src: true
@@ -62,13 +62,7 @@
     mode: 0644
   when: not zones_sample_file.stat.exists
 
-- name: Check if Client Certificates exist
-  become: yes
-  stat:
-    path: "{{ i2_pki_file }}"
-  register: client_certificate
-
-- name: Set-up Zone and Endpoints for localhost
+- name: Set-up ZoneName and NodeName Endpoint (zones.conf)
   become: yes
   template:
     src: default_zone_fragment.j2
@@ -77,11 +71,14 @@
     group: "{{ i2_group }}"
     mode: 0644
     backup: "{{ i2_keep_backups }}"
-  when: client_certificate.stat.exists
+  when: i2_master or i2_certificate_signed_by_ca or not i2_connection_allowed
   notify: reload icinga2
 
-# icinga2 node setup takes care of this for us on first-run
-- name: Set-up zones.conf on peers, satellites and agents
+# "icinga2 node setup" takes care of this for us on first-run, but only on nodes
+# (including nodes that will become satellites), not on masters.
+# We use the presence of PKI-related files to determine whether
+# this is a first run or a follow-up run.
+- name: Set-up zones.conf on multi-master peers, satellites and agents
   become: yes
   blockinfile:
     create: yes
@@ -90,7 +87,20 @@
     dest: "{{ i2_conf_dir }}/zones.conf"
     marker: "// {mark} Ansible managed block for peers or parents"
     content: "{{ lookup('template', 'templates/peer_zone_fragment.conf.j2') }}"
-  when: i2_master or client_certificate.stat.exists
+  when: i2_master or i2_certificate_signed_by_ca or not i2_connection_allowed
+
+- name: Set-up remote Zones and Endpoints on Masters
+  become: yes
+  blockinfile:
+    create: yes
+    owner: "{{ i2_user }}"
+    group: "{{ i2_group }}"
+    dest: "{{ i2_conf_dir }}/zones.conf"
+    marker: "// {mark} Ansible managed block for {{ item }} (satellite)"
+    content: "{{ lookup('template', 'templates/zone_fragment.conf.j2') }}"
+  loop: "{{ groups[i2_satellite_group] }}"
+  when: i2_master
+  notify: reload icinga2
 
 - name: Add global-templates zone to zones.conf
   become: yes
@@ -104,27 +114,9 @@
       object Zone "global-templates" {
         global = true
       }
+  when: i2_master or i2_certificate_signed_by_ca or not i2_connection_allowed
 
-- name: Set-up remote Zones and Endpoints on Masters
-  become: yes
-  blockinfile:
-    create: yes
-    owner: "{{ i2_user }}"
-    group: "{{ i2_group }}"
-    dest: "{{ i2_conf_dir }}/zones.conf"
-    marker: "// {mark} Ansible managed block for {{ item }} (satellite)"
-    content: "{{ lookup('template', 'templates/zone_fragment.conf.j2') }}"
-  loop: "{{ groups['satellites'] }}"
-  when: i2_master
-  notify: reload icinga2
-  # when: inventory_hostname in groups['masters']
-  # delegate_to: "{{ groups['masters'][0] }}"
-  # delegate_to: i2_config_master
-  # when: inventory_hostname in groups['satellites']
-  # when: also nodes directly connecting to master (groups['tomaster'])
-
-# WARNING: "agents" doesn't exist in ACT hosts inventory
-- name: Set-up remote Zones and Endpoints on Satellites
+- name: Set-up remote Zones and Endpoints for Satellites
   become: yes
   blockinfile:
     create: yes
@@ -133,10 +125,15 @@
     dest: "{{ i2_zones_dir }}/{{ hostvars[item].i2_zone }}/endpoints.conf"
     marker: "// {mark} Ansible managed block for {{ item }} (client)"
     content: "{{ lookup('template', 'templates/zone_fragment.conf.j2') }}"
-  loop: "{{ groups['agents'] }}"
-  when: i2_satellite
+  loop: "{{ groups[i2_agent_group] }}"
+  when:
+    - i2_config_master
+    - hostvars[item].i2_hostname is defined
   notify: reload icinga2
-  # when: inventory_hostname in groups['satelites']
-  # delegate_to: "{{ groups['masters'][0] }}"
-  # when: inventory_hostname in groups['agents']
-  # when: i2_master is sameas false and i2_satellite is sameas false
+
+- name: Ensure state of features on masters
+  become: yes
+  shell: >
+    icinga2 feature enable {{ item }}
+  loop: "{{ i2_alt_features }}"
+  when: i2_master or i2_certificate_signed_by_ca or not i2_connection_allowed

@@ -1,5 +1,5 @@
 ---
-- name: Icinga2 - Copy optional plug-ins into place
+- name: Copy optional check-scripts into place
   become: yes
   copy:
     src: "{{ item }}"
@@ -8,4 +8,4 @@
     group: "{{ i2_group }}"
     mode: 0755
     backup: yes
-  loop: "{{ i2_plugins }}"
+  loop: "{{ i2_custom_scripts }}"

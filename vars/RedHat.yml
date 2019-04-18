@@ -5,3 +5,6 @@ i2_lib_dir: /usr/lib64
 
 mysql_defaults_file: /etc/my.cnf
 mysql_config_file: /etc/my.cnf.d/server.cnf
+
+i2_webui_mysql_schema: "/usr/share/doc/icingaweb2/schema/mysql.schema.sql"
+i2_ido_mysql_schema: /usr/share/icinga2-ido-mysql/schema/mysql.sql

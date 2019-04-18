@@ -15,12 +15,20 @@
     state: import
     target: "{{ i2_ido_mysql_schema }}"
 
-- name: restart mysqld
+- name: import icingaweb2 schema
+  become: yes
+  mysql_db:
+    config_file: "{{ mysql_defaults_file }}"
+    name: "{{ i2_webui_params.database }}"
+    state: import
+    target: "{{ i2_webui_mysql_schema }}"
+
+- name: restart mariadb
   become: yes
   service:
-    name: mysql
+    name: mariadb
     state: restarted
-  when: i2_manage_service and i2_ido_backend == 'mysql'
+  when: i2_setup_ido and i2_ido_backend == 'mysql'
 
 - name: reload icinga2
   become: yes
@@ -36,10 +44,29 @@
     state: restarted
   when: i2_manage_service
 
-- name: reload icinga2 on master
+- name: restart php-fpm
   become: yes
   service:
-    name: icinga2
-    state: reloaded
+    name: rh-php72-php-fpm
+    state: restarted
+    enabled: yes
   when: i2_manage_service
-  delegate_to: "{{ groups['masters'][0] }}"
+  listen: restart redhat httpd
+
+- name: restart httpd
+  become: yes
+  service:
+    name: httpd
+    state: restarted
+    enabled: yes
+  when: i2_manage_service
+  listen: restart redhat httpd
+
+- name: restart apache2
+  become: yes
+  service:
+    name: apache2
+    state: restarted
+    enabled: yes
+  when: i2_manage_service
+  listen: restart debian httpd

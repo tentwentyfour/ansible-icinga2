@@ -1,0 +1,61 @@
+---
+- name: IcingaWeb2 - Install PHP requirements
+  apt:
+    name:
+      - php
+      - php-gd
+      - libapache2-mod-php
+    state: present
+
+- name: IcingaWeb2 - Get PHP version
+  command: php --version
+  register: php_version
+  changed_when: false
+
+- name: IcingaWeb2 - Set PHP version
+  set_fact:
+    php_version: "{{ php_version.stdout_lines[0] | regex_replace('^PHP (\\d\\.\\d).*$','\\1') }}"
+
+- name: IcingaWeb2 - Enable PHP apache module
+  apache2_module:
+    name: "php{{ php_version }}"
+
+- name: Debian - IcingaWeb2 - Set timezone in php.ini
+  lineinfile:
+    path: '/etc/php/{{ php_version }}/apache2/php.ini'
+    regexp: '^;?date.timezone ='
+    line: 'date.timezone = {{ i2_timezone }}'
+  notify: restart apache2
+
+- name: IcingaWeb2 - Install Icinga Web2 on Debian family
+  apt:
+    name:
+      - icingaweb2
+      - git
+    state: latest
+  tags: icinga2-ansible-web2-ui-install
+
+- name: IcingaWeb2 - Add user www-data to group icingaweb2
+  user:
+    name: www-data
+    groups: icingaweb2
+
+- name: IcingaWeb2 - Adjust Directory Owner and Group
+  file:
+    path: "/etc/icingaweb2/modules"
+    owner: www-data
+    group: icingaweb2
+    mode: 0755
+    state: directory
+    recurse: yes
+
+- name: IcingaWeb2 - Create Directory Owner and Group
+  file:
+    path: "/etc/icingaweb2/modules/{{ item }}"
+    owner: www-data
+    group: icingaweb2
+    mode: 0755
+    state: directory
+  loop:
+    - monitoring
+    - translation

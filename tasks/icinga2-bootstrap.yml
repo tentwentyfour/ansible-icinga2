@@ -1,0 +1,80 @@
+---
+# Copying role-vars to host-vars
+# Might be replaced by using default() where required,
+# e.g. "hostvars[host]['variabl_key']|default(variable)"
+# but is that actually a better way?
+- name: Set hostname from defaults
+  set_fact:
+    i2_hostname: "{{ i2_hostname }}"
+
+- name: Set zonename from defaults
+  set_fact:
+    i2_zonename: "{{ i2_zonename }}"
+
+- name: Determine configuration master node name
+  set_fact:
+    configuration_master: "{{ groups[i2_master_group][0] }}"
+
+- name: Copy custom templates into hostvars
+  set_fact:
+    i2_templates: "{{ i2_templates }}"
+
+- name: Copy custom objects into hostvars
+  set_fact:
+    i2_objects: "{{ i2_objects }}"
+
+- name: Copy custom apply rules into hostvars
+  set_fact:
+    i2_apply_rules: "{{ i2_apply_rules }}"
+
+- name: RedHat - Check if User desires specific package version
+  set_fact:
+    i2_package_name: "{{ i2_package_name }}-{{ i2_package_version }}"
+  when:
+    - i2_package_version|length > 3
+    - ansible_os_family == 'RedHat'
+
+- name: Debian - Check if User desires specific package version
+  set_fact:
+    i2_package_name: "{{ i2_package_name }}={{ i2_package_version }}"
+  when:
+    - i2_package_version|length > 3
+    - ansible_os_family == 'Debian'
+
+- name: Check if Client Certificates exist
+  become: yes
+  stat:
+    path: "{{ i2_pki_file }}"
+  register: client_certificate
+  tags:
+    - nodes
+    - config
+
+- name: Check if Client Certificate is signed by our CA
+  become: yes
+  shell: >-
+    openssl x509 -in {{ i2_pki_file }} -noout -text | grep Issuer
+  register: certificate_authority
+  ignore_errors: yes
+  when: client_certificate.stat.exists
+  tags:
+    - nodes
+    - config
+
+- name: Set certificate authority fact
+  set_fact:
+    i2_certificate_signed_by_ca: yes
+  when:
+    - certificate_authority.changed
+    - "'Icinga CA' in certificate_authority.stdout"
+  tags:
+    - nodes
+    - config
+
+- name: Icingaweb2 (Redhat) - Check if SELinux is enabled
+  command: /usr/sbin/getenforce
+  register: selinux
+  when: ansible_os_family == 'RedHat'
+  tags:
+    - ido
+    - webui

@@ -6,19 +6,32 @@ i2_default_constants:
   PluginDir: "{{ i2_lib_dir }}/nagios/plugins"
   ManubulonPluginDir: "{{ i2_lib_dir }}/nagios/plugins"
   PluginContribDir: "{{ i2_lib_dir }}/nagios/plugins"
-  NodeName: "{{ ansible_fqdn }}"
-  ZoneName: "{{ ansible_fqdn }}"
+  NodeName: "{{ i2_hostname }}"
+  ZoneName: "{{ i2_hostname }}"
   TicketSalt: ""
 i2_constants: "{{ i2_default_constants | combine(i2_custom_constants) }}"
 i2_features: "{{ i2_custom_features }}"
-i2_objects: "{{ i2_custom_objects }}"
+
+# Alternative feature implementation (just enable/disable for now)
+i2_alt_features: "{{ i2_custom_alt_features }}"
+
 i2_templates: "{{ i2_custom_templates }}"
+i2_objects: "{{ i2_custom_objects }}"
 i2_apply_rules: "{{ i2_custom_apply_rules }}"
 
-i2_ca_file: "{{ i2_ca_path }}/ca.crt"
-i2_pki_file: "{{ i2_pki_path }}/{{ ansible_fqdn }}.crt"
+i2_global_templates: "{{ i2_custom_global_templates }}"
+i2_global_objects: "{{ i2_custom_global_objects }}"
+i2_global_apply_rules: "{{ i2_custom_global_apply_rules }}"
+i2_virtual_hosts: "{{ i2_custom_virtual_hosts }}"
 
-# i2_config_master:
-# Would it be possible to determine this value implicitly by doing something like
-# when: inventory_hostname in groups['masters'] and (groups['masters']|length == 1 or i2_config_master)
-# ??
+i2_ignore_zone_directories: "{{ i2_custom_ignore_zone_directories }}"
+
+i2_ca_file: "{{ i2_ca_path }}/ca.crt"
+i2_pki_file: "{{ i2_pki_path }}/{{ i2_hostname }}.crt"
+
+i2_master_group: "{{ i2_default_master_group }}"
+i2_satellite_group: "{{ i2_default_satellite_group }}"
+i2_agent_group: "{{ i2_default_agent_group }}"
+
+i2_webui_modules: "{{ i2_default_webui_modules }}"
+i2_webui_connectfrom: "{{ i2_webui_default_connectfrom }}"

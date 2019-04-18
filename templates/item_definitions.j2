@@ -1,0 +1,100 @@
+{% import 'object_attributes.j2' as attributes %}
+
+{# Objects #}
+{% macro object(item) %}
+
+{%- for object_name, params in item.value.items() %}
+object {{ item.key }} "{{ object_name }}" {
+{% set vars = params.pop('variables', None) -%}
+{{ attributes.attrs(params) }}
+{% if vars is defined and vars is not none -%}
+{{ attributes.attrs(vars, 'vars.') }}
+{%- endif -%}
+}
+{% endfor -%}
+{% endmacro %}
+
+{# Apply rules #}
+{% macro apply_rule(item) %}
+{% for rule_name, params in item.value.items() -%}
+
+{% set target = params.pop('target', None) %}
+{% set iterator = params.pop('iterator', None) %}
+{% set operators = params.pop('var_operators', None) %}
+
+apply {{ item.key }} "{{ rule_name }}{% if iterator is defined and iterator is not none -%}
+-" for ({% if iterator is string %}{{ iterator }}{% else %}{{ iterator.key }}{%- if iterator.value is defined %} => {{ iterator.value }}{% endif %} in {{ iterator.in }}{% endif %})
+{%- else -%}"{%- endif %} to{% if target in ['Host', 'Service'] %} {{ target }} {% else %} Host {% endif -%}
+{
+
+{% if (params.attributes is not defined) and (params.variables is not defined) -%}
+  {{ attributes.attrs(params) }}
+{%- endif -%}
+
+{%- if params.conditionals is defined -%}
+  {% for conditional in params.conditionals %}
+    {%- set condition = conditional.pop('condition') -%}
+    if ({{ condition }}) {
+      {{ attributes.attrs(conditional) }}
+    }
+  {%- endfor -%}
+{%- endif -%}
+
+{% if operators is defined and operators is not none and operators|length -%}
+  {%- for operator, params in operators.items() %}
+    {% if params is iterable and params is not string -%}
+      {{ attributes.attrs({ 'vars': params }, '', operator, iterator) }}
+    {% else %}
+      {{ attributes.eval_value('vars', params, '', operator, iterator) }}
+    {% endif -%}
+  {% endfor -%}
+{%- endif -%}
+
+{%- if params.custom is defined -%}
+  {{ params.custom }}
+{%- endif -%}
+
+{%- if params.attributes is defined -%}
+  {{ attributes.attrs(params.attributes) }}
+{%- endif %}
+
+{% if params.variables is defined -%}
+  {{ attributes.attrs(params.variables, 'vars.', '=', iterator) }}
+{% endif %}
+}
+{% endfor -%}
+{% endmacro %}
+
+{# Templates #}
+{% macro template(item) -%}
+
+{% for object_name, params in item.value.items() %}
+
+{% set operators = params.pop('var_operators', None) %}
+
+template {{ item.key }} "{{ object_name }}" {
+{% if params.attributes is defined %}
+{{ attributes.attrs(params.attributes) }}
+{% endif %}
+{% if params.variables is defined %}
+{{ attributes.attrs(params.variables, 'vars.') }}
+{% endif %}
+{% if params.attributes is not defined and params.variables is not defined %}
+{{ attributes.attrs(params) }}
+{% endif %}
+{% if params.conditionals is defined %}
+{% for conditional in params.conditionals %}
+{% set condition = conditional.pop('condition') %}
+if ({{ condition }}) {
+  {{ attributes.attrs(conditional) }}
+}
+{% endfor %}
+{% endif %}
+{% if operators is defined and operators is not none and operators|length %}
+{% for operator, params in operators.items() %}
+{{ attributes.attrs({ 'vars': params }, '', operator) }}
+{% endfor %}
+{% endif %}
+}
+{% endfor %}
+{% endmacro %}

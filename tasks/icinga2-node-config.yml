@@ -1,12 +1,13 @@
 # This file does not run on master nodes
 ---
-- name: Check if Certificate Authority is available
+- name: Nodes - Check if Certificate Authority is available
   become: yes
   stat:
     path: "{{ i2_pki_path }}/trusted_parent.crt"
   register: trusted_authority
+  when: i2_connection_allowed
 
-- name: Initialize Certificate Directory
+- name: Nodes - Initialize Certificate Directory
   become: yes
   file:
     path: "{{ i2_pki_path }}"
@@ -15,49 +16,153 @@
     group: "{{ i2_group }}"
     mode: 0700
 
-- name: Generate Client Ticket on Master
+# This command must be run as privileged user or the icinga user.
+- name: Nodes - Generate Client Ticket on Master
   become: yes
-  command: icinga2 pki ticket --cn {{ ansible_fqdn }}
+  command: icinga2 pki ticket --cn {{ i2_hostname }}
   register: pki_ticket
-  delegate_to: "{{ groups['masters'][0] }}"
-  when: client_certificate.stat.exists is sameas false
+  delegate_to: "{{ configuration_master }}"
+  when:
+    - i2_certificate_signed_by_ca is sameas false
+    - i2_connection_allowed
 
-  # Todo: How can / will this work for nodes unable to connect
-  # directly to master?
-- name: Retrieve Public Certificate From Master
+- name: Nodes - Generate self-signed certificate for first-contact with parent
   become: yes
   command: >
-    icinga2 pki save-cert --key {{ i2_pki_path }}/{{ ansible_fqdn }}.key
+    icinga2 pki new-cert --cn {{ i2_hostname }}
+      --key {{ i2_pki_path }}/{{ i2_hostname }}.key
+      --cert {{ i2_pki_file }}
+  when:
+    - i2_connection_allowed
+    - trusted_authority.stat.exists is sameas false
+
+- name: Nodes - Retrieve Public Certificate from Parent Node
+  become: yes
+  command: >
+    icinga2 pki save-cert
+      --key {{ i2_pki_path }}/{{ i2_hostname }}.key
       --cert {{ i2_pki_file }}
       --trustedcert {{ i2_pki_path }}/trusted_parent.crt
-      --host {{ hostvars[groups['masters'][0]]['ansible_fqdn'] }}
-  when: trusted_authority.stat.exists is sameas false
+      --host {{ hostvars[i2_peer_nodes[0]]['i2_hostname'] }}
+  when:
+    - i2_connection_allowed
+    - trusted_authority.stat.exists is sameas false
 
-- name: Create Host Certificate and set-up Node (Top-Down)
+- name: Nodes - Retrieve signed certificate and set-up agent (Top-Down)
   become: yes
   command: >
-    icinga2 node setup --ticket {{ pki_ticket.stdout }}
-    --endpoint {{ hostvars[i2_peer_nodes[0]]['ansible_fqdn'] }}
-    --trustedcert {{ i2_pki_path }}/trusted_parent.crt
-    --zone {{ ansible_fqdn }}
-    --parent_zone {{ i2_zone }}
-    --parent_host {{ hostvars[i2_peer_nodes[0]]['ansible_fqdn'] }}
-    --accept-commands
-    --accept-config
-    --disable-confd
-  when: i2_connection_direction == 'top-down' and not client_certificate.stat.exists
+    icinga2 node setup
+      --cn {{ i2_hostname }}
+      --ticket {{ pki_ticket.stdout }}
+      --endpoint {{ hostvars[i2_peer_nodes[0]]['i2_hostname'] }}
+      --trustedcert {{ i2_pki_path }}/trusted_parent.crt
+      --zone {{ i2_zonename }}
+      --parent_zone {{ i2_zone }}
+      --parent_host {{ hostvars[i2_peer_nodes[0]]['i2_hostname'] }}
+      --accept-commands
+      --accept-config
+      --disable-confd
+  when:
+    - i2_connection_allowed
+    - i2_connection_direction == 'top-down'
+    - not i2_certificate_signed_by_ca
+  notify: restart icinga2
 
-- name: Create Host Certificate and set-up Node (Bottom-Up)
+- name: Collect endpoints for bottom-up config
+  set_fact:
+    endpoints: "{{ endpoints|default('') }}
+     --endpoint {{ hostvars[item]['i2_hostname'] }},{{ hostvars[item]['ansible_facts']['default_ipv4']['address'] }},{{ i2_api_port }}"
+  loop: "{{ i2_peer_nodes }}"
+  when:
+    - i2_connection_allowed
+    - i2_connection_direction == 'bottom-up'
+    - not i2_certificate_signed_by_ca
+
+- name: Generate client certificate on master
   become: yes
   command: >
-    icinga2 node setup --ticket {{ pki_ticket.stdout }}
-    --endpoint {{ hostvars[groups['masters'][0]]['ansible_fqdn'] }},{{ hostvars[groups['masters'][0]]['ansible_facts']['default_ipv4']['address'] }},{{ i2_api_port }}
-    --trustedcert {{ i2_pki_path }}/trusted_parent.crt
-    --zone {{ ansible_fqdn }}
-    --parent_zone {{ i2_zone }}
-    --parent_host {{ hostvars[groups['masters'][0]]['ansible_fqdn'] }}
-    --accept-commands
-    --accept-config
-    --disable-confd
-  when: i2_connection_direction == 'bottom-up' and not client_certificate.stat.exists
+    icinga2 pki new-cert --cn {{ i2_hostname }}
+    --csr {{ i2_pki_path }}/{{ i2_hostname }}.csr
+    --key {{ i2_pki_path }}/{{ i2_hostname }}.key
+  delegate_to: "{{ configuration_master }}"
+  when:
+    - not i2_certificate_signed_by_ca
+    - not i2_connection_allowed
 
+- name: Sign client certificates on master
+  become: yes
+  command: >
+    icinga2 pki sign-csr --csr {{ i2_pki_path }}/{{ i2_hostname }}.csr
+    --cert {{ i2_pki_path }}/{{ i2_hostname }}.crt
+  delegate_to: "{{ configuration_master }}"
+  when:
+    - not i2_certificate_signed_by_ca
+    - not i2_connection_allowed
+
+- name: Fetch public ca from master
+  fetch:
+    src: "{{ i2_pki_path }}/ca.crt"
+    dest: buffer/
+    flat: yes
+  run_once: yes
+  delegate_to: "{{ configuration_master }}"
+  when:
+    - not i2_certificate_signed_by_ca
+    - not i2_connection_allowed
+
+- name: Fetch node certificates from Master
+  fetch:
+    src: "{{ i2_pki_path }}/{{ item }}"
+    dest: buffer/
+    flat: yes
+  loop: [ "{{ i2_hostname }}.crt", "{{ i2_hostname }}.key" ]
+  delegate_to: "{{ configuration_master }}"
+  when:
+    - not i2_certificate_signed_by_ca
+    - not i2_connection_allowed
+
+- name: Copy ca to node
+  copy:
+    src: "buffer/ca.crt"
+    dest: "{{ i2_pki_path }}/ca.crt"
+  when:
+    - not i2_certificate_signed_by_ca
+    - not i2_connection_allowed
+
+- name: Copy certificates to respective node
+  copy:
+    src: "buffer/{{ item }}"
+    dest: "{{ i2_pki_path }}/"
+  loop: [ "{{ i2_hostname }}.crt", "{{ i2_hostname }}.key" ]
+  when:
+    - not i2_certificate_signed_by_ca
+    - not i2_connection_allowed
+  notify: reload icinga2
+
+- name: Ensure state of features on nodes
+  become: yes
+  shell: >
+    icinga2 feature enable {{ item }}
+  loop: "{{ i2_alt_features }}"
+  when:
+    - not i2_connection_allowed
+
+- name: Nodes - Retrieve signed certificate and set-up agent (Bottom-Up)
+  become: yes
+  command: >
+    icinga2 node setup
+      --cn {{ i2_hostname }}
+      --ticket {{ pki_ticket.stdout }} {{ endpoints }}
+      --trustedcert {{ i2_pki_path }}/trusted_parent.crt
+      --zone {{ i2_zonename }}
+      --parent_zone {{ i2_zone }}
+      --parent_host {{ hostvars[i2_peer_nodes[0]]['i2_hostname'] }}
+      --accept-commands
+      --accept-config
+      --disable-confd
+  when:
+    - i2_connection_allowed
+    - i2_connection_direction == 'bottom-up'
+    - not i2_certificate_signed_by_ca
+    - endpoints is defined
+  notify: restart icinga2

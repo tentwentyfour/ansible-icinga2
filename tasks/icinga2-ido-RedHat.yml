@@ -1,18 +1,59 @@
 ---
+# Alternatives to MySQL-python are
+# - python2-PyMySQL and
+# - python36-PyMySQL, but
+# both are in EPEL which we don't add by default.
 - name: RedHat - Install IDO Module and Dependencies
   become: yes
   yum:
     name:
       - mariadb-server
       - icinga2-ido-mysql
+      - MySQL-python
     state: present
+    enablerepo:
+      - base
+      - ICINGA-release
+    update_cache: yes
   when: i2_manage_package
   tags:
     - install
 
 - name: RedHat - Make sure MariaDB is started
+  become: yes
   service:
     name: mariadb
     state: started
     enabled: yes
   when: i2_manage_service
+
+- name: Add secondary master's IP to trusted zone
+  become: yes
+  firewalld:
+    zone: trusted
+    source: "{{ hostvars[i2_peer_nodes[0]].ansible_facts.default_ipv4.address }}/32"
+    state: enabled
+    permanent: yes
+  when: i2_config_master and i2_manage_firewall
+
+- name: Restart firewalld
+  become: yes
+  service:
+    name: firewalld
+    state: restarted
+  when: i2_manage_firewall
+
+- name: "RedHat - Allow connections to MySQL-compatible DB from IPs in trusted zone"
+  become: yes
+  firewalld:
+    zone: trusted
+    service: mysql
+    state: disabled
+    permanent: yes
+    immediate: yes
+  when: i2_manage_firewall
+
+- name: "IcingaWeb2 (RedHat) - SELinux: allow network connections from httpd"
+  become: yes
+  command: setsebool -P httpd_can_network_connect 1
+  when: selinux.stdout == "Enforcing" and (i2_webui_connectfrom != "localhost" or groups[i2_master_group]|length > 1)

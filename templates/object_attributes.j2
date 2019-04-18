@@ -1,42 +1,48 @@
-{% macro attrs(map, prefix="", exclude=[]) %}
+{#
+ # The indentation in these templates is not great,
+ # but we'll have to sacrifice it for practical indentation
+ # in the resulting output files.
+ # Jinja2 whitespace handling is a mess.
+ #}
+{%- macro attrs(map, prefix="", operator="=", iterator=None) -%}
   {% for k, v in map.items() %}
-    {%- if v is mapping %}
-      {{ mapdict(k, v, prefix) | indent(width=2)}}
-    {%- else %}
-      {{ eval_value(k, v, prefix) }}
-    {% endif %}
-  {% endfor %}
+  {% if v is mapping -%}
+  {{ mapdict(k, v, prefix, operator, iterator) | indent(width=2)}}
+  {%- else -%}
+  {{ eval_value(k, v, prefix, operator, iterator) }}
+{% endif -%}
+  {% endfor -%}
+{%- endmacro -%}
+
+{%- macro mapdict(key, dictionary, prefix="", operator="=", iterator=None) -%}
+  {{ key|icingakey(prefix) }} {{ operator }} {
+{% for subkey, value in dictionary.items() %}
+  {% if value is mapping -%}
+    {{ mapdict(subkey, value, "", operator, iterator) | indent(width=2) }}
+  {%- else -%}
+    {{ eval_value(subkey, value, "", operator, iterator) }}
+{% endif -%}
+  {% endfor -%}
+  }
 {% endmacro %}
 
-{% macro mapdict(key, dictionary, prefix="") %}
-{{ key|icingakey(prefix) }} = {
-{% for subkey, value in dictionary.items() -%}
-{% if value is mapping -%}
-{{ mapdict(subkey, value) | indent(width=2) }}
-{% else -%}
-{{ eval_value(subkey, value) }}
-{% endif -%}
-{% endfor -%}
-}
-{% endmacro %}
-
-{% macro eval_value(orig_key, val, prefix="") -%}
-{% set key = prefix + orig_key if prefix is defined %}
-{% if val is iterable and orig_key in ['command'] -%}
-  {{ key }} = [ {{ val | map('constants') | join(' + ') }} ]
-{% elif orig_key in ['import'] -%}
-{% for template in val if val is not string -%}
-  {{ key }} "{{ template }}"
-{% endfor %}
-{% elif val is iterable and orig_key in ['assign', 'ignore'] -%}
-  {{ key }} where {{ val | join(' && ') }}
-{% elif val is iterable and val is not string -%}
-  {{ key }} = [ {{ val | map('constants') | join(', ') }} ]
-{% elif val | bool is sameas false and val | string | lower == "false" -%}
-  {{ key }} = false
-{% elif val is defined and val is sameas true -%}
-  {{ key }} = true
-{% else -%}
-  {{ key }} = {{ val|icinga_vars }}
-{% endif -%}
-{% endmacro -%}
+{%- macro eval_value(orig_key, val, prefix="", operator="=", iterator=None) -%}
+  {%- set key = prefix + orig_key if prefix is defined -%}
+  {% if val is iterable and val is not string and orig_key in ['command'] -%}
+    {{ key }} = [ {{ val | map('icinga_vars') | join(' + ') }} ]
+  {%- elif orig_key in ['import'] -%}
+    {%- for template in val if val is not string -%}
+      {{ key }} "{{ template }}"
+  {% endfor -%}
+  {%- elif val is iterable and orig_key in ['assign', 'ignore'] -%}
+    {{ key }} where {{ val | join(' && ') }}
+  {%- elif val is iterable and val is not string -%}
+    {{ key }} = [ {{ val | map('icinga_vars') | join(', ') }} ]
+  {%- elif (val | bool is sameas false) and (val | string | lower == "false") -%}
+    {{ key }} = false
+  {%- elif (val is defined) and (val | bool is sameas true) -%}
+    {{ key }} = true
+  {%- else -%}
+    {{ key }} {{ operator }} {{ val|icinga_vars(iterator) }}
+  {%- endif -%}
+{%- endmacro -%}
