@@ -19,11 +19,15 @@ i2_include_plugins:
   - "nscp"
 i2_custom_constants: {}
 i2_custom_features: {}
+i2_custom_scripts: []
+
 i2_custom_templates: {}
-i2_custom_master_templates: {}
 i2_custom_objects: {}
 i2_custom_apply_rules: {}
-i2_custom_scripts: []
+
+i2_custom_global_templates: {}
+i2_custom_global_objects: {}
+i2_custom_global_apply_rules: {}
 
 i2_remove_unmanaged_features: no
 i2_remove_unmanaged_objects: no
@@ -36,6 +40,7 @@ i2_api_port: 5665
 i2_connection_direction: 'top-down'
 
 i2_hostname: "{{ ansible_fqdn }}"
+i2_zonename: "{{ ansible_fqdn }}"
 i2_default_satellite_group: satellites
 i2_default_master_group: masters
 i2_default_agent_group: agents

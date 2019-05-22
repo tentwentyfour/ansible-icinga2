@@ -1,4 +1,13 @@
 ---
+# Copying role-vars to hostvars
+- name: Icinga2 – Set hostname from defaults
+  set_fact:
+    i2_hostname: "{{ i2_hostname }}"
+
+- name: Icinga2 – Set zonename from defaults
+  set_fact:
+    i2_zonename: "{{ i2_zonename }}"
+
 - name: Create conf.d directory
   become: yes
   file:
@@ -103,20 +112,6 @@
     content: "{{ lookup('template', 'templates/peer_zone_fragment.conf.j2') }}"
   when: i2_master or client_certificate.stat.exists
 
-- name: Add global-templates zone to zones.conf
-  become: yes
-  blockinfile:
-    create: yes
-    owner: "{{ i2_user }}"
-    group: "{{ i2_group }}"
-    dest: "{{ i2_conf_dir }}/zones.conf"
-    marker: "// {mark} Ansible managed block for global-templates"
-    block: |
-      object Zone "global-templates" {
-        global = true
-      }
-  when: i2_master or client_certificate.stat.exists
-
 - name: Icinga2 – Set-up remote Zones and Endpoints on Masters
   become: yes
   blockinfile:
@@ -130,6 +125,20 @@
   when: i2_master
   notify: reload icinga2
 
+- name: Icinga2 – Add global-templates zone to zones.conf
+  become: yes
+  blockinfile:
+    create: yes
+    owner: "{{ i2_user }}"
+    group: "{{ i2_group }}"
+    dest: "{{ i2_conf_dir }}/zones.conf"
+    marker: "// {mark} Ansible managed block for global-templates"
+    block: |
+      object Zone "global-templates" {
+        global = true
+      }
+  when: i2_master or client_certificate.stat.exists
+
 - name: Icinga2 – Set-up remote Zones and Endpoints on Satellites
   become: yes
   blockinfile:
@@ -141,9 +150,7 @@
     content: "{{ lookup('template', 'templates/zone_fragment.conf.j2') }}"
   loop: "{{ groups[i2_agent_group] }}"
   when: i2_satellite
+  # This will not work when converting satellite group into zone_group
+  # because that would also run this on masters.
+  # when: inventory_hostname in groups[i2_satellite_group]
   notify: reload icinga2
-
-# We want to use this from hostvars later on.
-- name: Icinga2 – Set hostname from defaults
-  set_fact:
-    i2_hostname: "{{ i2_hostname }}"

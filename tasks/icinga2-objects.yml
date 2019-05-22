@@ -2,7 +2,7 @@
 - name: Icinga2 – Create Zone Directories for Satellites
   become: yes
   file:
-    name: "{{ i2_zones_dir }}/{{ hostvars[item].i2_hostname }}"
+    name: "{{ i2_zones_dir }}/{{ hostvars[item].i2_zonename }}"
     state: directory
     owner: "{{ i2_user }}"
     group: "{{ i2_group }}"
@@ -11,10 +11,13 @@
 
 - name: Icinga2 – Collect all Zones
   set_fact:
-    used_zones: "{{ [ i2_global_dir ] + [ i2_zones_dir + '/' + hostvars[item].i2_hostname ] }}"
-  loop: "{{ groups[i2_satellite_group] }}"
+    used_zones: "{{
+      [ i2_global_dir ]
+      + [ i2_zones_dir + '/' + hostvars[item].i2_zonename ]
+    }}"
+  loop: "{{ groups[i2_satellite_group] + groups[i2_master_group] }}"
 
-- name: Icinga2 – Collect all existing objects
+- name: Icinga2 – Collect all pre-existing objects
   become: yes
   find:
     paths: "{{ used_zones }}"
@@ -32,19 +35,6 @@
   when:
     - i2_remove_unmanaged_objects
 
-- name: Icinga2 – Generate Master Templates
-  become: yes
-  template:
-    src: template_template.conf.j2
-    dest: "{{ i2_zones_dir }}/{{ i2_zone }}/{{ item.key|lower }}-templates.conf"
-    owner: "{{ i2_user }}"
-    group: "{{ i2_group }}"
-    mode: 0644
-  with_dict: "{{ i2_master_templates }}"
-  register: managed_master_templates
-  notify:
-    - reload icinga2
-
 - name: Icinga2 – Generate global Templates
   become: yes
   template:
@@ -53,7 +43,7 @@
     owner: "{{ i2_user }}"
     group: "{{ i2_group }}"
     mode: 0644
-  with_dict: "{{ i2_templates }}"
+  with_dict: "{{ i2_global_templates }}"
   register: managed_global_templates
   notify:
     - reload icinga2
@@ -66,7 +56,7 @@
     owner: "{{ i2_user }}"
     group: "{{ i2_group }}"
     mode: 0644
-  with_dict: "{{ i2_objects }}"
+  with_dict: "{{ i2_global_objects }}"
   register: managed_global_objects
   notify:
     - reload icinga2
@@ -79,29 +69,70 @@
     owner: "{{ i2_user }}"
     group: "{{ i2_group }}"
     mode: 0644
-  with_dict: "{{ i2_apply_rules }}"
+  with_dict: "{{ i2_global_apply_rules }}"
   register: managed_global_apply_rules
   notify:
     - reload icinga2
 
-- name: Icinga2 – Create Commands in Satellite Zones
+- name: Icinga2 – Create Templates inside Zones
   become: yes
   template:
-    src: commands-template.conf.j2
-    dest: "{{ i2_zones_dir }}/{{ hostvars[item].i2_hostname }}/commands.conf"
+    src: template-template.conf.j2
+    dest: "{{ i2_zones_dir }}/{{ hostvars[item].i2_zonename }}/templates.conf"
     owner: "{{ i2_user }}"
     group: "{{ i2_group }}"
     mode: 0644
-  loop: "{{ groups[i2_satellite_group] }}"
-  register: managed_zone_commands
+  loop: "{{ groups[i2_satellite_group] + groups[i2_master_group] }}"
+  register: managed_zone_templates
   notify:
     - reload icinga2
+
+- name: Icinga2 – Create Objects inside Zones
+  become: yes
+  template:
+    src: object-template.conf.j2
+    dest: "{{ i2_zones_dir }}/{{ hostvars[item].i2_zonename }}/objects.conf"
+    owner: "{{ i2_user }}"
+    group: "{{ i2_group }}"
+    mode: 0644
+  loop: "{{ groups[i2_satellite_group] + groups[i2_master_group] }}"
+  register: managed_zone_objects
+  notify:
+    - reload icinga2
+
+- name: Icinga2 – Create Apply Rules inside Zones
+  become: yes
+  template:
+    src: apply-rule-template.conf.j2
+    dest: "{{ i2_zones_dir }}/{{ hostvars[item].i2_zonename }}/rules.conf"
+    owner: "{{ i2_user }}"
+    group: "{{ i2_group }}"
+    mode: 0644
+  loop: "{{ groups[i2_satellite_group] + groups[i2_master_group] }}"
+  register: managed_zone_apply_rules
+  notify:
+    - reload icinga2
+
+### ???? This is a specific case, because a master is not part of the satellites group..
+# but what prevents it from being part of it?
+# - name: Icinga2 – Generate Master Templates
+#   become: yes
+#   template:
+#     src: template_template.conf.j2
+#     dest: "{{ i2_zones_dir }}/{{ i2_zone }}/{{ item.key|lower }}-templates.conf"
+#     owner: "{{ i2_user }}"
+#     group: "{{ i2_group }}"
+#     mode: 0644
+#   with_dict: "{{ i2_master_templates }}"
+#   register: managed_master_templates
+#   notify:
+#     - reload icinga2
 
 - name: Icinga2 – Create zone-specific Hosts
   become: yes
   template:
     src: host_template.conf.j2
-    dest: "{{ i2_zones_dir }}/{{ hostvars[item]['i2_zone'] }}/{{ hostvars[item].i2_hostname }}.conf"
+    dest: "{{ i2_zones_dir }}/{{ hostvars[item]['i2_zone'] }}/{{ hostvars[item]['i2_hostname'] }}.conf"
     owner: "{{ i2_user }}"
     group: "{{ i2_group }}"
     mode: 0644
@@ -110,25 +141,28 @@
   notify:
     - reload icinga2
 
-- name: Icinga2 – Set fact managed objects
+- name: Icinga2 – Set fact Managed Objects
   set_fact:
-    managed_objects: "{{ managed_master_templates.results
-    + managed_global_templates.results
-    + managed_global_objects.results
-    + managed_global_apply_rules.results
-    + managed_zone_commands.results
-    + managed_zone_hosts.results }}"
+    managed_objects: "{{
+      managed_global_templates.results
+      + managed_global_objects.results
+      + managed_global_apply_rules.results
+      + managed_zone_templates.results
+      + managed_zone_objects.results
+      + managed_zone_apply_rules.results
+      + managed_zone_hosts.results
+    }}"
   when:
     - i2_remove_unmanaged_objects
 
-- name: Icinga2 – Set fact managed object files
+- name: Icinga2 – Set fact for managed object files
   set_fact:
     managed_object_files: "{{ managed_object_files|default([]) + [item.dest] }}"
   loop: "{{ managed_objects }}"
   when:
     - i2_remove_unmanaged_objects
 
-- name: Icinga2 – Removing unmanaged objects
+- name: Icinga2 – Removing unmanaged object files
   become: yes
   file:
     path: "{{ item }}"
