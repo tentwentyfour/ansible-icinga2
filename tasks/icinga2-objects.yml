@@ -1,18 +1,19 @@
 ---
-- name: Icinga2 – Create Zone Directories for Satellites
+- name: Icinga2 – Create Zone Directories
   become: yes
   file:
-    name: "{{ i2_zones_dir }}/{{ hostvars[item].i2_zonename }}"
+    name: "{{ i2_zones_dir }}/{{ hostvars[item].i2_zonename }}/hosts"
     state: directory
     owner: "{{ i2_user }}"
     group: "{{ i2_group }}"
     mode: 0755
-  loop: "{{ groups[i2_satellite_group] }}"
+  loop: "{{ groups[i2_satellite_group] + groups[i2_master_group] }}"
 
+# Warning: This will result in duplicate path entries if
+# e.g. you have a ha-master or ha-satellite setup.
 - name: Icinga2 – Collect all Zones
   set_fact:
-    used_zones: "{{
-      [ i2_global_dir ]
+    used_zones: "{{ used_zones|default([ i2_global_dir ])
       + [ i2_zones_dir + '/' + hostvars[item].i2_zonename ]
     }}"
   loop: "{{ groups[i2_satellite_group] + groups[i2_master_group] }}"
@@ -20,8 +21,9 @@
 - name: Icinga2 – Collect all pre-existing objects
   become: yes
   find:
+    recurse: yes
     paths: "{{ used_zones }}"
-    patterns: '^(?!endpoints).*.conf'
+    patterns: '.*\.conf'
     use_regex: yes
     file_type: any
   register: existing_objects
@@ -113,26 +115,11 @@
   notify:
     - reload icinga2
 
-### ???? This is a specific case, because a master is not part of the satellites group..
-# but what prevents it from being part of it?
-# - name: Icinga2 – Generate Master Templates
-#   become: yes
-#   template:
-#     src: template_template.conf.j2
-#     dest: "{{ i2_zones_dir }}/{{ i2_zone }}/{{ item.key|lower }}-templates.conf"
-#     owner: "{{ i2_user }}"
-#     group: "{{ i2_group }}"
-#     mode: 0644
-#   with_dict: "{{ i2_master_templates }}"
-#   register: managed_master_templates
-#   notify:
-#     - reload icinga2
-
-- name: Icinga2 – Create zone-specific Hosts
+- name: Icinga2 – Create Hosts inside Zones
   become: yes
   template:
     src: host_template.conf.j2
-    dest: "{{ i2_zones_dir }}/{{ hostvars[item]['i2_zone'] }}/{{ hostvars[item]['i2_hostname'] }}.conf"
+    dest: "{{ i2_zones_dir }}/{{ hostvars[item]['i2_zone'] }}/hosts/{{ hostvars[item]['i2_hostname'] }}.conf"
     owner: "{{ i2_user }}"
     group: "{{ i2_group }}"
     mode: 0644

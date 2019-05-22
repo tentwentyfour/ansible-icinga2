@@ -51,11 +51,17 @@ def check_key_format(key, prefix):
   Check if a key needs quoting or prefixing.
   E.g. attributes in CheckCommands that are actually flags ("--foo")
   require to be quoted.
+  Also: Identifiers may not contain certain characters (e.g. space)
+  or start with certain characters (e.g. digits).
   """
   if prefix:
     return prefix + key
 
-  if key[:1] == '-':
+  # pattern1 = re.compile(r'^\d')
+  # pattern2 = re.compile(r'[\. ]+')
+  # if key[:1] == '-' or pattern1.match(key) or pattern2.match(key):
+  pattern = re.compile(r'^\d+.*|.*[\. ]+.*')
+  if key[:1] == '-' or pattern.match(key):
     return '"{}"'.format(key)
 
   return key
