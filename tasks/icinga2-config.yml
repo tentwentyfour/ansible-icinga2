@@ -101,7 +101,7 @@
 # icinga2 node setup takes care of this for us on first-run, but only on nodes,
 # not on masters. We use the presence of PKI-related files to determine whether
 # this is a first run.
-- name: Set-up zones.conf on multi-master peers, satellites and agents
+- name: Icinga2 – Set-up zones.conf on multi-master peers, satellites and agents
   become: yes
   blockinfile:
     create: yes
@@ -149,7 +149,7 @@
     marker: "// {mark} Ansible managed block for {{ item }} (client)"
     content: "{{ lookup('template', 'templates/zone_fragment.conf.j2') }}"
   loop: "{{ groups[i2_agent_group] }}"
-  when: i2_satellite
+  when: i2_satellite and i2_agent_group in groups
   # This will not work when converting satellite group into zone_group
   # because that would also run this on masters.
   # when: inventory_hostname in groups[i2_satellite_group]
