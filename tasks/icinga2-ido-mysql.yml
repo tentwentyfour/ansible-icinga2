@@ -22,7 +22,7 @@
     regexp: '^bind-address'
     line: "bind-address = {{ ansible_facts.default_ipv4.address }}"
   when: groups['masters']|length > 1 and i2_ido_backend == 'mysql'
-  notify: restart mysqld
+  notify: restart mariadb
 
 - name: Create MySQL user for IDO
   become: yes

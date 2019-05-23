@@ -5,6 +5,7 @@
     name:
       - mariadb-server
       - icinga2-ido-mysql
+      - MySQL-python
     state: present
   when: i2_manage_package
   tags:

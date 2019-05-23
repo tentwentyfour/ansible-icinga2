@@ -15,10 +15,10 @@
     state: import
     target: "{{ i2_ido_mysql_schema }}"
 
-- name: restart mysqld
+- name: restart mariadb
   become: yes
   service:
-    name: mysql
+    name: mariadb
     state: restarted
   when: i2_setup_ido and i2_ido_backend == 'mysql'
 
