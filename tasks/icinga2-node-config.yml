@@ -32,18 +32,18 @@
     icinga2 pki save-cert --key {{ i2_pki_path }}/{{ i2_hostname }}.key
       --cert {{ i2_pki_file }}
       --trustedcert {{ i2_pki_path }}/trusted_parent.crt
-      --host {{ hostvars[configuration_master][i2_hostname] }}
+      --host {{ hostvars[configuration_master]['i2_hostname'] }}
   when: trusted_authority.stat.exists is sameas false
 
 - name: Create Host Certificate and set-up Node (Top-Down)
   become: yes
   command: >
     icinga2 node setup --ticket {{ pki_ticket.stdout }}
-    --endpoint {{ hostvars[i2_peer_nodes[0]][i2_hostname] }}
+    --endpoint {{ hostvars[i2_peer_nodes[0]]['i2_hostname'] }}
     --trustedcert {{ i2_pki_path }}/trusted_parent.crt
     --zone {{ i2_hostname }}
     --parent_zone {{ i2_zone }}
-    --parent_host {{ hostvars[i2_peer_nodes[0]][i2_hostname] }}
+    --parent_host {{ hostvars[i2_peer_nodes[0]]['i2_hostname'] }}
     --accept-commands
     --accept-config
     --disable-confd
