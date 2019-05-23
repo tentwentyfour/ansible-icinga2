@@ -41,7 +41,7 @@
     icinga2 node setup --ticket {{ pki_ticket.stdout }}
     --endpoint {{ hostvars[i2_peer_nodes[0]]['i2_hostname'] }}
     --trustedcert {{ i2_pki_path }}/trusted_parent.crt
-    --zone {{ i2_hostname }}
+    --zone {{ i2_zonename }}
     --parent_zone {{ i2_zone }}
     --parent_host {{ hostvars[i2_peer_nodes[0]]['i2_hostname'] }}
     --accept-commands
@@ -53,13 +53,13 @@
   become: yes
   command: >
     "icinga2 node setup --ticket {{ pki_ticket.stdout }}
-    --endpoint {{ hostvars[configuration_master][i2_hostname] }},\
+    --endpoint {{ hostvars[configuration_master]['i2_hostname'] }},\
     {{ hostvars[configuration_master]['ansible_facts']['default_ipv4']['address'] }},\
     {{ i2_api_port }}
     --trustedcert {{ i2_pki_path }}/trusted_parent.crt
-    --zone {{ i2_hostname }}
+    --zone {{ i2_zonename }}
     --parent_zone {{ i2_zone }}
-    --parent_host {{ hostvars[configuration_master][i2_hostname] }}
+    --parent_host {{ hostvars[configuration_master]['i2_hostname'] }}
     --accept-commands
     --accept-config
     --disable-confd"

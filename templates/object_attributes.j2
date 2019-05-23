@@ -32,7 +32,7 @@
   {{ key }} where {{ val | join(' && ') }}
 {% elif val is iterable and val is not string -%}
   {{ key }} = [ {{ val | map('icinga_vars') | join(', ') }} ]
-{% elif val | bool is sameas false and val | string | lower == "false" -%}
+{% elif (val | bool is sameas false) and (val | string | lower == "false") -%}
   {{ key }} = false
 {% elif val is defined and val | bool is sameas true -%}
   {{ key }} = true
