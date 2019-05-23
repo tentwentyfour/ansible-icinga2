@@ -10,7 +10,7 @@ library "{{ library }}"
 object {{ item.key }} "{{ object_name }}" {
 {% set vars = params.pop('variables', None) %}
 {{ attributes.attrs(params) -}}
-{%- if vars is defined and vars is not none %}
+{% if vars is defined and vars is not none %}
 {{ attributes.attrs(vars, 'vars.') -}}
 {% endif -%}
 }
@@ -37,9 +37,17 @@ apply {{ item.key }} "{{ rule_name }}{% if iterator is defined and iterator is n
 {% if params.variables is defined -%}
 {{ attributes.attrs(params.variables, 'vars.') -}}
 {%- endif %}
-{% if params.attributes is not defined and params.variables is not defined %}
+{% if (params.attributes is not defined) and (params.variables is not defined) %}
 {{ attributes.attrs(params) -}}
 {% endif %}
+{% if params.conditionals is defined -%}
+{% for conditional in params.conditionals %}
+{% set condition = conditional.pop('condition') %}
+if ({{ condition }}) {
+  {{ attributes.attrs(conditional) -}}
+}
+{% endfor %}
+{% endif -%}
 {% if operators is defined and operators is not none and operators|length -%}
     {%- for operator, params in operators.items() %}
         {% if params is iterable and params is not string -%}
@@ -64,7 +72,7 @@ apply {{ item.key }} "{{ rule_name }}{% if iterator is defined and iterator is n
 template {{ item.key }} "{{ object_name }}" {
 {% if params.attributes is defined -%}
 {{ attributes.attrs(params.attributes) -}}
-{% endif -%}
+{% endif %}
 {% if params.variables is defined -%}
 {{ attributes.attrs(params.variables, 'vars.') -}}
 {% endif -%}

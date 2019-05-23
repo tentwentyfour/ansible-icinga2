@@ -34,7 +34,7 @@
   {{ key }} = [ {{ val | map('icinga_vars') | join(', ') }} ]
 {% elif (val | bool is sameas false) and (val | string | lower == "false") -%}
   {{ key }} = false
-{% elif val is defined and val | bool is sameas true -%}
+{% elif (val is defined) and (val | bool is sameas true) -%}
   {{ key }} = true
 {% else -%}
   {{ key }} {{ operator }} {{ val|icinga_vars(iterator) }}
