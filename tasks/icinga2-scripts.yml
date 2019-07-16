@@ -1,5 +1,5 @@
 ---
-- name: Icinga2 - Copy optional plug-ins into place
+- name: Copy optional check-scripts into place
   become: yes
   copy:
     src: "{{ item }}"

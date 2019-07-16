@@ -10,6 +10,6 @@
     state: present
   environment:
     DEBIAN_FRONTEND: noninteractive
-  when: i2_manage_package
+  when: i2_manage_package or i2_manage_webui
   tags:
     - install

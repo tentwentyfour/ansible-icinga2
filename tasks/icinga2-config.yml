@@ -1,26 +1,17 @@
 ---
 # Copying role-vars to hostvars
-- name: Icinga2 – Set hostname from defaults
+- name: Set hostname from defaults
   set_fact:
     i2_hostname: "{{ i2_hostname }}"
 
-- name: Icinga2 – Set zonename from defaults
+- name: Set zonename from defaults
   set_fact:
     i2_zonename: "{{ i2_zonename }}"
 
-- name: Create conf.d directory
+- name: Create config directories to include – if any
   become: yes
   file:
     dest: "{{ i2_conf_dir }}/{{ item }}"
-    state: directory
-    owner: "{{ i2_user }}"
-    group: "{{ i2_group }}"
-  with_items: "{{ i2_confd }}"
-
-- name: Remove default config from conf.d directory
-  become: yes
-  file:
-    dest: "{{ i2_conf_dir }}/hosts.conf"
     state: directory
     owner: "{{ i2_user }}"
     group: "{{ i2_group }}"
@@ -101,7 +92,7 @@
 # icinga2 node setup takes care of this for us on first-run, but only on nodes,
 # not on masters. We use the presence of PKI-related files to determine whether
 # this is a first run.
-- name: Icinga2 – Set-up zones.conf on multi-master peers, satellites and agents
+- name: Set-up zones.conf on multi-master peers, satellites and agents
   become: yes
   blockinfile:
     create: yes
@@ -112,7 +103,7 @@
     content: "{{ lookup('template', 'templates/peer_zone_fragment.conf.j2') }}"
   when: i2_master or client_certificate.stat.exists
 
-- name: Icinga2 – Set-up remote Zones and Endpoints on Masters
+- name: Set-up remote Zones and Endpoints on Masters
   become: yes
   blockinfile:
     create: yes
@@ -125,7 +116,7 @@
   when: i2_master
   notify: reload icinga2
 
-- name: Icinga2 – Add global-templates zone to zones.conf
+- name: Add global-templates zone to zones.conf
   become: yes
   blockinfile:
     create: yes
@@ -139,7 +130,7 @@
       }
   when: i2_master or client_certificate.stat.exists
 
-- name: Icinga2 – Set-up remote Zones and Endpoints on Satellites
+- name: Set-up remote Zones and Endpoints on Satellites
   become: yes
   blockinfile:
     create: yes

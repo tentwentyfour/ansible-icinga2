@@ -5,6 +5,13 @@
     - feature-handler
     - config
 
+# Causes timeouts!
+# - name: Set timezone
+#   timezone:
+#     name: "{{ i2_timezone }}"
+#   tags:
+#     - config
+
 - name: Set up Icinga Repositories and install packages
   include: icinga2.yml
   tags:
@@ -27,6 +34,13 @@
   when: i2_features|flatten|length > 0
   tags:
     - feature-handler
+
+- name: Set up Icingaweb2
+  import_tasks: icinga2-web2.yml
+  when: i2_config_master and i2_setup_webui
+  tags:
+    - webui
+    - install
 
 - name: Set up Icinga2 API and PKI
   import_tasks: icinga2-api.yml

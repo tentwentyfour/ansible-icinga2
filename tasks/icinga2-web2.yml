@@ -1,0 +1,25 @@
+---
+- include_tasks: icinga2-web2-RedHat.yml
+  when: ansible_os_family == 'RedHat'
+
+- include_tasks: icinga2-web2-Debian.yml
+  when: ansible_os_family == 'Debian'
+
+# Todo: Only run this below when necesary
+- name: Get setup token
+  become: yes
+  shell: 'icingacli setup token create | sed "s/.*token is: \(.*\)/\1/g"'
+  register: setup_token
+  tags: token
+
+- name: IcingaWeb2 Installation finished
+  debug:
+    msg: "The WebUI token is {{ setup_token.stdout }}, use it at http://{{ i2_hostname }}/icingaweb2/setup ({{ ansible_facts.default_ipv4.address }}) to continue the installation"
+  tags:
+    - icinga2-ansible-web2-ui-install
+    - token
+
+# Something here doesn't work but I don't know what… looks
+# like this will need to time out.
+# - name: IcingaWeb2 – Install additional modules
+#   import_tasks: icinga2-web2-modules.yml

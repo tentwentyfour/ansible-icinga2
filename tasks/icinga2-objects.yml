@@ -1,5 +1,5 @@
 ---
-- name: Icinga2 – Create Zone Directories
+- name: Create Zone Directories
   become: yes
   file:
     name: "{{ i2_zones_dir }}/{{ hostvars[item].i2_zonename }}/hosts"
@@ -11,14 +11,14 @@
 
 # Warning: This will result in duplicate path entries if
 # e.g. you have a ha-master or ha-satellite setup.
-- name: Icinga2 – Collect all Zones
+- name: Collect all Zones
   set_fact:
     used_zones: "{{ used_zones|default([ i2_global_dir ])
       + [ i2_zones_dir + '/' + hostvars[item].i2_zonename ]
     }}"
   loop: "{{ groups[i2_satellite_group] + groups[i2_master_group] }}"
 
-- name: Icinga2 – Collect all pre-existing objects
+- name: Collect all pre-existing objects
   become: yes
   find:
     recurse: yes
@@ -30,14 +30,14 @@
   when:
     - i2_remove_unmanaged_objects
 
-- name: Icinga2 – Set fact Existing-Objects
+- name: Set fact Existing-Objects
   set_fact:
     existing_files: "{{ existing_files|default([]) + [ item.path ] }}"
   loop: "{{ existing_objects.files }}"
   when:
     - i2_remove_unmanaged_objects
 
-- name: Icinga2 – Generate global Templates
+- name: Generate global Templates
   become: yes
   template:
     src: template_template.conf.j2
@@ -50,7 +50,7 @@
   notify:
     - reload icinga2
 
-- name: Icinga2 – Generate global Objects
+- name: Generate global Objects
   become: yes
   template:
     src: generic-object-template.conf.j2
@@ -63,7 +63,7 @@
   notify:
     - reload icinga2
 
-- name: Icinga2 – Generate global Apply Rules
+- name: Generate global Apply Rules
   become: yes
   template:
     src: generic-apply-rule-template.conf.j2
@@ -76,7 +76,7 @@
   notify:
     - reload icinga2
 
-- name: Icinga2 – Create Templates inside Zones
+- name: Create Templates inside Zones
   become: yes
   template:
     src: template-template.conf.j2
@@ -89,7 +89,7 @@
   notify:
     - reload icinga2
 
-- name: Icinga2 – Create Objects inside Zones
+- name: Create Objects inside Zones
   become: yes
   template:
     src: object-template.conf.j2
@@ -102,7 +102,7 @@
   notify:
     - reload icinga2
 
-- name: Icinga2 – Create Apply Rules inside Zones
+- name: Create Apply Rules inside Zones
   become: yes
   template:
     src: apply-rule-template.conf.j2
@@ -115,7 +115,7 @@
   notify:
     - reload icinga2
 
-- name: Icinga2 – Create Hosts inside Zones
+- name: Create Hosts inside Zones
   become: yes
   template:
     src: host_template.conf.j2
@@ -128,7 +128,7 @@
   notify:
     - reload icinga2
 
-- name: Icinga2 – Set fact Managed Objects
+- name: Set fact Managed Objects
   set_fact:
     managed_objects: "{{
       managed_global_templates.results
@@ -142,14 +142,14 @@
   when:
     - i2_remove_unmanaged_objects
 
-- name: Icinga2 – Set fact for managed object files
+- name: Set fact for managed object files
   set_fact:
     managed_object_files: "{{ managed_object_files|default([]) + [item.dest] }}"
   loop: "{{ managed_objects }}"
   when:
     - i2_remove_unmanaged_objects
 
-- name: Icinga2 – Removing unmanaged object files
+- name: Removing unmanaged object files
   become: yes
   file:
     path: "{{ item }}"

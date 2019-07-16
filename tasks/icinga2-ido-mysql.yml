@@ -7,7 +7,7 @@
   include: icinga2-ido-RedHat.yml
   when: ansible_os_family == 'RedHat'
 
-- name: Set up MySQL-compatible Database
+- name: Set up MySQL-compatible database for IDO
   become: yes
   mysql_db:
     config_file: "{{ mysql_defaults_file }}"
@@ -15,24 +15,46 @@
     state: present
   notify: import ido schema
 
-- name: Ensure MySQL server is bound to public IP for HA setups
+- name: Set up MySQL-compatible database for IcingaWeb2
+  become: yes
+  mysql_db:
+    config_file: "{{ mysql_defaults_file }}"
+    name: "{{ i2_webui_params.database }}"
+    state: present
+  when: i2_setup_webui
+  notify: import icingaweb2 schema
+
+- name: Ensure MySQL-compatible server is bound to public IP for HA setups
   become: yes
   lineinfile:
     path: "{{ mysql_config_file }}"
     regexp: '^bind-address'
     line: "bind-address = {{ ansible_facts.default_ipv4.address }}"
-  when: groups['masters']|length > 1 and i2_ido_backend == 'mysql'
+  when: groups[i2_master_group]|length > 1 and i2_ido_backend == 'mysql'
   notify: restart mariadb
 
-- name: Create MySQL user for IDO
+- name: Create user for IDO database
   become: yes
   mysql_user:
     config_file: "{{ mysql_defaults_file }}"
     name: "{{ i2_ido_params.user }}"
     password: "{{ i2_ido_params.password }}"
     host: "{{ hostvars[item].ansible_facts.default_ipv4.address }}"
-    priv: 'icinga.*:SELECT,INSERT,UPDATE,DELETE,DROP,CREATE VIEW,INDEX,EXECUTE'
+    priv: "{{ i2_ido_params.database }}.*:SELECT,INSERT,UPDATE,DELETE,DROP,CREATE VIEW,INDEX,EXECUTE"
     state: present
-  loop: "{{ groups['masters'] }}"
+  loop: "{{ groups[i2_master_group] }}"
+  when: i2_config_master and i2_ido_backend == 'mysql'
+  notify: restart icinga2
+
+- name: Create user for IcingaWeb2 database
+  become: yes
+  mysql_user:
+    config_file: "{{ mysql_defaults_file }}"
+    name: "{{ i2_webui_params.user }}"
+    password: "{{ i2_webui_params.password }}"
+    host: "{{ item }}"
+    priv: "{{ i2_webui_params.database }}.*:ALL"
+    state: present
+  loop: "{{ i2_webui_connectfrom }}"
   when: i2_config_master and i2_ido_backend == 'mysql'
   notify: restart icinga2

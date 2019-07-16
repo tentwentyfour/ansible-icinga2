@@ -99,11 +99,13 @@
     mode: 0755
   when: groups['masters']|length == 1 or i2_config_master
 
+# Not sure how to make the location "conf.d" configurable.
+# Blerim made i2_confd an array of locations to be included.
 - name: Icinga 2 master - Create Api-Users config file
   become: yes
   blockinfile:
     create: yes
-    dest: "{{ i2_confd }}/api-users.conf"
+    dest: "{{ i2_zones_dir }}/{{ i2_zone }}/api-users.conf"
     marker: "// {mark} Ansible managed block for {{ item.key }}"
     content: "{{ lookup('template', 'api_users_fragment.j2') }}"
     owner: "{{ i2_user }}"
@@ -111,7 +113,7 @@
     mode: 0644
     directory_mode: 0755
   with_dict: "{{ i2_api_users }}"
-  when: i2_api_users is defined
+  when: i2_config_master and i2_api_users is defined
   notify:
     - reload icinga2
 

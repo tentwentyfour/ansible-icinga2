@@ -1,12 +1,12 @@
 ---
 i2_manage_repository: yes
+i2_manage_package: yes
+i2_manage_service: yes
+i2_manage_firewall: yes
 i2_apt_key: "https://packages.icinga.com/icinga.key"
 i2_apt_url: "deb http://packages.icinga.com/{{ ansible_lsb.id|lower }} icinga-{{ ansible_distribution_release }} main"
 i2_yum_key: "https://packages.icinga.com/icinga.key"
 i2_yum_url: "http://packages.icinga.com/epel/$releasever/release/"
-i2_manage_package: yes
-i2_manage_service: yes
-i2_setup_ido: no
 i2_keep_backups: yes
 i2_confd:
   - "conf.d"
@@ -51,8 +51,37 @@ i2_pki_path: /var/lib/icinga2/certs
 i2_zones_dir: "{{ i2_conf_dir }}/zones.d"
 i2_global_dir: "{{ i2_zones_dir }}/global-templates"
 
+# IDO
+i2_setup_ido: no
 i2_ido_params:
   database: icinga
   user: icinga
   password: icinga
-i2_ido_mysql_schema: /usr/share/icinga2-ido-mysql/schema/mysql.sql
+
+## Icingaweb2 settings
+# Note that database user and password cannot be
+# identical to the ones used for IDO or the mysql_user
+# command will override that access.
+i2_setup_webui: no
+i2_webui_php_all: no
+i2_webui_modules_dir: "/usr/share/icingaweb2/modules"
+i2_default_timezone: "UTC"
+i2_default_webui_modules:
+  - map
+  - cube
+  - toplevelview
+  - businessprocess
+i2_webui_params:
+  database: icingaweb
+  user: icingaweb
+  password: icingaweb
+# If the Icingaweb2 will not run on the same machine as the icinga2 master,
+# supply the hosts's hostname or IP here to allow access from that host
+# to the MySQL-compatible database. The default is to use "localhost"
+# and connect through a unix socket.
+# But you could also use an ansible_fact, such as
+# {{ ansible_facts.default_ipv4.address }}
+i2_webui_default_connectfrom:
+  - localhost
+
+

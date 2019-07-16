@@ -14,6 +14,7 @@ icinga2_keywords = [
   'OK',
   'Warning',
   'Critical',
+  'Unknown',
   'Up',
   'Down',
   'Problem',
@@ -32,6 +33,10 @@ def check_keywords(value, iterator=None):
   Quotes values that do not represent icinga2 keywords or match
   specific types or patterns, such as those representing host variables.
   Also leaves values unquoted that have appeared as keys or values in loops.
+
+  Finally, values that are prefixed with "v'" will be return unquoted. That
+  is probably a better trade-off than to just assume some strings –
+  such as "name" – to always represent variables.
   """
   if type(value) is int:
     return value
@@ -42,6 +47,10 @@ def check_keywords(value, iterator=None):
   pattern = re.compile(r'^(?:\d+(ms|s|m|h|d)?|host\.vars.*)$')
   if value in icinga2_keywords or pattern.match(value):
     return value
+
+  pattern = re.compile(r'^v\'(.*)$')
+  if pattern.match(value):
+    return pattern.sub(r'\1', value)
 
   return '"{}"'.format(value)
 

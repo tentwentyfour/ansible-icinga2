@@ -1,5 +1,16 @@
 ---
-- name: RedHat - Add Icinga 2 repository
+- name: RedHat – Install EPEL Release
+  become: yes
+  package:
+    name: epel-release
+    state: present
+  when: i2_manage_repository
+
+- name: Icingaweb2 (Redhat) – Check if SELinux is enabled
+  command: /usr/sbin/getenforce
+  register: selinux
+
+- name: RedHat – Add Icinga 2 repository
   become: yes
   yum_repository:
     name: ICINGA-release
@@ -9,10 +20,27 @@
     gpgcheck: yes
   when: i2_manage_repository
 
-- name: RedHat - Ensure icinga2 is installed
+- name: RedHat – Ensure icinga2 is installed
   become: yes
   yum:
     name: icinga2
     state: present
+    update_cache: yes
   notify: start icinga2
   when: i2_manage_package
+
+- name: RedHat – Install additional check plug-ins
+  become: yes
+  yum:
+    name: nagios-plugins-all
+    state: latest
+  when: i2_manage_package
+
+- name: "RedHat – Firewall: allow connections to icinga2 api port"
+  become: yes
+  firewalld:
+    port: "{{ i2_api_port }}/tcp"
+    state: enabled
+    permanent: yes
+    immediate: yes
+  when: i2_master
