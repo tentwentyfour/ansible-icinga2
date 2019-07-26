@@ -1,16 +1,12 @@
 # This file does not run on master nodes
 ---
-- name: Icinga2 – Determine configuration master node name
-  set_fact:
-    configuration_master: "{{ groups[i2_master_group][0] }}"
-
-- name: Icinga2 – Check if Certificate Authority is available
+- name: Nodes – Check if Certificate Authority is available
   become: yes
   stat:
     path: "{{ i2_pki_path }}/trusted_parent.crt"
   register: trusted_authority
 
-- name: Icinga2 – Initialize Certificate Directory
+- name: Nodes – Initialize Certificate Directory
   become: yes
   file:
     path: "{{ i2_pki_path }}"
@@ -19,48 +15,64 @@
     group: "{{ i2_group }}"
     mode: 0700
 
-- name: Icinga2 – Generate Client Ticket on Master
+# This command must be run as privileged user or the icinga user
+- name: Nodes – Generate Client Ticket on Master
   become: yes
   command: icinga2 pki ticket --cn {{ i2_hostname }}
   register: pki_ticket
   delegate_to: "{{ configuration_master }}"
   when: client_certificate.stat.exists is sameas false
 
-- name: Icinga2 – Retrieve Public Certificate From Master
+- name: Nodes – Generate self-signed certificate for first-contact with parent
   become: yes
   command: >
-    icinga2 pki save-cert --key {{ i2_pki_path }}/{{ i2_hostname }}.key
+    icinga2 pki new-cert --cn {{ i2_hostname }}
+      --key {{ i2_pki_path }}/{{ i2_hostname }}.key
       --cert {{ i2_pki_file }}
-      --trustedcert {{ i2_pki_path }}/trusted_parent.crt
-      --host {{ hostvars[configuration_master]['i2_hostname'] }}
   when: trusted_authority.stat.exists is sameas false
 
-- name: Icinga2 – Create Host Certificate and set-up Node (Top-Down)
+- name: Nodes – Retrieve Public Certificate from Parent Node
   become: yes
   command: >
-    icinga2 node setup --ticket {{ pki_ticket.stdout }}
-    --endpoint {{ hostvars[i2_peer_nodes[0]]['i2_hostname'] }}
-    --trustedcert {{ i2_pki_path }}/trusted_parent.crt
-    --zone {{ i2_zonename }}
-    --parent_zone {{ i2_zone }}
-    --parent_host {{ hostvars[i2_peer_nodes[0]]['i2_hostname'] }}
-    --accept-commands
-    --accept-config
-    --disable-confd
-  when: i2_connection_direction == 'top-down' and not client_certificate.stat.exists
+    icinga2 pki save-cert
+      --key {{ i2_pki_path }}/{{ i2_hostname }}.key
+      --cert {{ i2_pki_file }}
+      --trustedcert {{ i2_pki_path }}/trusted_parent.crt
+      --host {{ hostvars[i2_peer_nodes[0]]['i2_hostname'] }}
+  when: trusted_authority.stat.exists is sameas false
 
-- name: Icinga2 – Create Host Certificate and set-up Node (Bottom-Up)
+- name: Nodes – Retrieved signed certificate and set-up agent (Top-Down)
   become: yes
   command: >
-    "icinga2 node setup --ticket {{ pki_ticket.stdout }}
-    --endpoint {{ hostvars[configuration_master]['i2_hostname'] }},\
-    {{ hostvars[configuration_master]['ansible_facts']['default_ipv4']['address'] }},\
-    {{ i2_api_port }}
-    --trustedcert {{ i2_pki_path }}/trusted_parent.crt
-    --zone {{ i2_zonename }}
-    --parent_zone {{ i2_zone }}
-    --parent_host {{ hostvars[configuration_master]['i2_hostname'] }}
-    --accept-commands
-    --accept-config
-    --disable-confd"
+    icinga2 node setup
+      --cn {{ i2_hostname }}
+      --ticket {{ pki_ticket.stdout }}
+      --endpoint {{ hostvars[i2_peer_nodes[0]]['i2_hostname'] }}
+      --trustedcert {{ i2_pki_path }}/trusted_parent.crt
+      --zone {{ i2_zonename }}
+      --parent_zone {{ i2_zone }}
+      --parent_host {{ hostvars[i2_peer_nodes[0]]['i2_hostname'] }}
+      --accept-commands
+      --accept-config
+      --disable-confd
+  when: i2_connection_direction == 'top-down' and not client_certificate.stat.exists
+  notify: restart icinga2
+
+- name: Nodes – Retrieved signed certificate and set-up agent (Bottom-Up)
+  become: yes
+  command: >
+    "icinga2 node setup
+      --cn {{ i2_hostname }}
+      --ticket {{ pki_ticket.stdout }}
+      --endpoint {{ hostvars[configuration_master]['i2_hostname'] }},\
+      {{ hostvars[configuration_master]['ansible_facts']['default_ipv4']['address'] }},\
+      {{ i2_api_port }}
+      --trustedcert {{ i2_pki_path }}/trusted_parent.crt
+      --zone {{ i2_zonename }}
+      --parent_zone {{ i2_zone }}
+      --parent_host {{ hostvars[configuration_master]['i2_hostname'] }}
+      --accept-commands
+      --accept-config
+      --disable-confd"
   when: i2_connection_direction == 'bottom-up' and not client_certificate.stat.exists
+  notify: restart icinga2

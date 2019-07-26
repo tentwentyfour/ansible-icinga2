@@ -2,15 +2,12 @@
 - name: Include OS specific vars
   include_vars: "{{ ansible_os_family }}.yml"
   tags:
-    - feature-handler
-    - config
+    - always
 
-# Causes timeouts!
-# - name: Set timezone
-#   timezone:
-#     name: "{{ i2_timezone }}"
-#   tags:
-#     - config
+- name: Boostrap defaults
+  include: icinga2-bootstrap.yml
+  tags:
+    - always
 
 - name: Set up Icinga Repositories and install packages
   include: icinga2.yml
@@ -40,7 +37,6 @@
   when: i2_config_master and i2_setup_webui
   tags:
     - webui
-    - install
 
 - name: Set up Icinga2 API and PKI
   import_tasks: icinga2-api.yml
@@ -52,22 +48,19 @@
   import_tasks: icinga2-node-config.yml
   when: not i2_master and groups[i2_master_group] is defined
   tags:
-    - node
+    - nodes
 
 - name: Set up Icinga Templates, Objects and Apply Rules
   import_tasks: icinga2-objects.yml
   when: i2_config_master
   tags:
-    - config
-    - templates
     - objects
 
 - name: Copy any custom check scripts or plugins in place
   import_tasks: icinga2-scripts.yml
   when: i2_custom_scripts|length
   tags:
-    - checks
-    - scripts
+    - plugins
 
 - name: Make sure Icinga 2 is started
   service:

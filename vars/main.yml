@@ -21,7 +21,7 @@ i2_global_objects: "{{ i2_custom_global_objects }}"
 i2_global_apply_rules: "{{ i2_custom_global_apply_rules }}"
 
 i2_ca_file: "{{ i2_ca_path }}/ca.crt"
-i2_pki_file: "{{ i2_pki_path }}/{{ ansible_fqdn }}.crt"
+i2_pki_file: "{{ i2_pki_path }}/{{ i2_hostname }}.crt"
 
 i2_master_group: "{{ i2_default_master_group }}"
 i2_satellite_group: "{{ i2_default_satellite_group }}"

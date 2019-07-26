@@ -1,5 +1,5 @@
 ---
-- name: Create Zone Directories
+- name: Create Zone and per-zone Host Directories
   become: yes
   file:
     name: "{{ i2_zones_dir }}/{{ hostvars[item].i2_zonename }}/hosts"
@@ -76,6 +76,14 @@
   notify:
     - reload icinga2
 
+# The following 3 tasks must create files on the master.
+# Currently, we run them on the master looping through masters
+# and satellites, which makes it necessary to copy their
+# properties into their hostvars.
+# If we were to use delegate_to instead, we'd have a harder
+# time cleaning up unmanaged files.
+
+# Note: this loop will break for more than 1 satellite per zone
 - name: Create Templates inside Zones
   become: yes
   template:
@@ -84,7 +92,7 @@
     owner: "{{ i2_user }}"
     group: "{{ i2_group }}"
     mode: 0644
-  loop: "{{ groups[i2_satellite_group] + groups[i2_master_group] }}"
+  loop: "{{ groups[i2_satellite_group] + [configuration_master] }}"
   register: managed_zone_templates
   notify:
     - reload icinga2
@@ -97,7 +105,7 @@
     owner: "{{ i2_user }}"
     group: "{{ i2_group }}"
     mode: 0644
-  loop: "{{ groups[i2_satellite_group] + groups[i2_master_group] }}"
+  loop: "{{ groups[i2_satellite_group] + [configuration_master] }}"
   register: managed_zone_objects
   notify:
     - reload icinga2
@@ -110,7 +118,7 @@
     owner: "{{ i2_user }}"
     group: "{{ i2_group }}"
     mode: 0644
-  loop: "{{ groups[i2_satellite_group] + groups[i2_master_group] }}"
+  loop: "{{ groups[i2_satellite_group] + [configuration_master] }}"
   register: managed_zone_apply_rules
   notify:
     - reload icinga2

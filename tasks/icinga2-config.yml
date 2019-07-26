@@ -1,13 +1,4 @@
 ---
-# Copying role-vars to hostvars
-- name: Set hostname from defaults
-  set_fact:
-    i2_hostname: "{{ i2_hostname }}"
-
-- name: Set zonename from defaults
-  set_fact:
-    i2_zonename: "{{ i2_zonename }}"
-
 - name: Create config directories to include – if any
   become: yes
   file:
@@ -33,7 +24,7 @@
     path: "{{ i2_conf_dir }}/constants.conf-sample"
   register: sample_file
 
-- name: Copy original Icinga 2 config to sample
+- name: Back-up original Icinga 2 config to sample
   become: yes
   copy:
     remote_src: true
@@ -60,7 +51,7 @@
     path: "{{ i2_conf_dir }}/zones.conf-sample"
   register: zones_sample_file
 
-- name: Copy original Icinga 2 zones.conf to sample
+- name: Back-up original Icinga 2 zones.conf to sample
   become: yes
   copy:
     remote_src: true
@@ -70,12 +61,6 @@
     group: "{{ i2_group }}"
     mode: 0644
   when: not zones_sample_file.stat.exists
-
-- name: Check if Client Certificates exist
-  become: yes
-  stat:
-    path: "{{ i2_pki_file }}"
-  register: client_certificate
 
 - name: Set-up Zone and Endpoints for localhost
   become: yes
@@ -89,9 +74,10 @@
   when: i2_master or client_certificate.stat.exists
   notify: reload icinga2
 
-# icinga2 node setup takes care of this for us on first-run, but only on nodes,
-# not on masters. We use the presence of PKI-related files to determine whether
-# this is a first run.
+# icinga2 node setup takes care of this for us on first-run, but only on nodes
+# (including nodes that will become satellites), not on masters.
+# We use the presence of PKI-related files to determine whether
+# this is a first run or a follow-up run.
 - name: Set-up zones.conf on multi-master peers, satellites and agents
   become: yes
   blockinfile:
@@ -130,7 +116,7 @@
       }
   when: i2_master or client_certificate.stat.exists
 
-- name: Set-up remote Zones and Endpoints on Satellites
+- name: Set-up remote Zones and Endpoints for Satellites
   become: yes
   blockinfile:
     create: yes
@@ -140,8 +126,5 @@
     marker: "// {mark} Ansible managed block for {{ item }} (client)"
     content: "{{ lookup('template', 'templates/zone_fragment.conf.j2') }}"
   loop: "{{ groups[i2_agent_group] }}"
-  when: i2_satellite and i2_agent_group in groups
-  # This will not work when converting satellite group into zone_group
-  # because that would also run this on masters.
-  # when: inventory_hostname in groups[i2_satellite_group]
+  when: i2_config_master
   notify: reload icinga2

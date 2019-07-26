@@ -12,6 +12,11 @@ object Host "{{ hostvars[item].i2_hostname }}" {
   vars.os = "{{ hostvars[item].ansible_system }}"
   vars.os_family = "{{ hostvars[item].ansible_os_family }}"
 
+  {% if hostvars[item].i2_master is defined and hostvars[item].i2_master -%}
+  // Satellite zones controlled by this master.
+  {{ attributes.eval_value('zones', groups[i2_satellite_group], 'vars.') }}
+  {% endif %}
+
   {% if hostvars[item].i2_host_attributes is defined -%}
     {% set host_attributes = hostvars[item].i2_host_attributes %}
     {{ attributes.attrs(host_attributes) -}}

@@ -1,6 +1,7 @@
-{% macro object(item) -%}
 {% import 'object_attributes.j2' as attributes %}
+{% macro object(item) -%}
 
+{# No longer required since icinga 2.9 ? #}
 {% set library = item.value.pop('library', None) %}
 {%- if library is defined and library is not none %}
 library "{{ library }}"
@@ -17,10 +18,8 @@ object {{ item.key }} "{{ object_name }}" {
 {% endfor %}
 {% endmacro %}
 
-
+{# TODO: This looks like duplication with generic-apply-rule-template #}
 {% macro apply_rule(item) -%}
-{% import 'object_attributes.j2' as attributes %}
-
 {% for rule_name, params in item.value.items() %}
 
 {% set target = params.pop('target', None) %}
@@ -28,18 +27,17 @@ object {{ item.key }} "{{ object_name }}" {
 {% set operators = params.pop('var_operators', None) %}
 
 apply {{ item.key }} "{{ rule_name }}{% if iterator is defined and iterator is not none -%}
--" for ({% if iterator is string %}{{ iterator }}{% else %}{{ iterator.key }} => {{ iterator.value }} in {{ iterator.in }}{% endif %})
-{%- else -%}"{%- endif -%}{% if target in ['Host', 'Service'] %} to {{ target }} {% endif -%}
+-" for ({% if iterator is string %}{{ iterator }}{% else %}{{ iterator.key }}{%- if iterator.value is defined %} => {{ iterator.value }}{% endif %} in {{ iterator.in }}{% endif %})
+{%- else -%}"{%- endif %} to{% if target in ['Host', 'Service'] %} {{ target }} {% else %} Host {% endif -%}
 {
-{% if params.attributes is defined -%}
-{{ attributes.attrs(params.attributes) -}}
-{%- endif %}
-{% if params.variables is defined -%}
-{{ attributes.attrs(params.variables, 'vars.') -}}
-{%- endif %}
+
 {% if (params.attributes is not defined) and (params.variables is not defined) %}
 {{ attributes.attrs(params) -}}
 {% endif %}
+{% if params.variables is defined -%}
+{{ attributes.attrs(params.variables, 'vars.', '=', iterator) -}}
+{%- endif %}
+
 {% if params.conditionals is defined -%}
 {% for conditional in params.conditionals %}
 {% set condition = conditional.pop('condition') %}
@@ -48,6 +46,7 @@ if ({{ condition }}) {
 }
 {% endfor %}
 {% endif -%}
+
 {% if operators is defined and operators is not none and operators|length -%}
     {%- for operator, params in operators.items() %}
         {% if params is iterable and params is not string -%}
@@ -57,13 +56,17 @@ if ({{ condition }}) {
         {% endif -%}
     {% endfor -%}
 {% endif -%}
+
+{% if params.attributes is defined -%}
+{{ attributes.attrs(params.attributes) -}}
+{%- endif %}
+
 }
 {% endfor %}
 {% endmacro %}
 
 
 {% macro template(item) -%}
-{% import 'object_attributes.j2' as attributes %}
 
 {% for object_name, params in item.value.items() %}
 

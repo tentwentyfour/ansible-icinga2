@@ -1,0 +1,34 @@
+---
+# Copying role-vars to host-vars
+# Might be replaced by using default() where required,
+# e.g. "hostvars[host]['variabl_key']|default(variable)"
+# but is that actually a better way?
+- name: Set hostname from defaults
+  set_fact:
+    i2_hostname: "{{ i2_hostname }}"
+
+- name: Set zonename from defaults
+  set_fact:
+    i2_zonename: "{{ i2_zonename }}"
+
+- name: Determine configuration master node name
+  set_fact:
+    configuration_master: "{{ groups[i2_master_group][0] }}"
+
+- name: Copy custom templates into hostvars
+  set_fact:
+    i2_templates: "{{ i2_templates }}"
+
+- name: Copy custom objects into hostvars
+  set_fact:
+    i2_objects: "{{ i2_objects }}"
+
+- name: Copy custom apply rules into hostvars
+  set_fact:
+    i2_apply_rules: "{{ i2_apply_rules }}"
+
+- name: Check if Client Certificates exist
+  become: yes
+  stat:
+    path: "{{ i2_pki_file }}"
+  register: client_certificate
