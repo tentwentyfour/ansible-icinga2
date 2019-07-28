@@ -128,3 +128,22 @@
   loop: "{{ groups[i2_agent_group] }}"
   when: i2_config_master
   notify: reload icinga2
+
+# This isn't very elegant but the only way I could
+# think of to make this work in the short term.
+- name: Set fact for managed endpoint files
+  set_fact:
+    managed_object_files: "{{
+        (
+        managed_object_files|default([])
+        + [
+            i2_zones_dir
+            + '/'
+            + hostvars[item].i2_zone
+            + '/endpoints.conf'
+        ]
+        )
+        | unique
+      }}"
+  loop: "{{ groups[i2_agent_group] }}"
+  when: i2_remove_unmanaged_objects

@@ -18,7 +18,6 @@ object {{ item.key }} "{{ object_name }}" {
 {% endfor %}
 {% endmacro %}
 
-{# TODO: This looks like duplication with generic-apply-rule-template #}
 {% macro apply_rule(item) -%}
 {% for rule_name, params in item.value.items() %}
 
@@ -56,6 +55,10 @@ if ({{ condition }}) {
         {% endif -%}
     {% endfor -%}
 {% endif -%}
+
+{% if params.custom is defined %}
+    {{ params.custom }}
+{% endif %}
 
 {% if params.attributes is defined -%}
 {{ attributes.attrs(params.attributes) -}}
