@@ -1,5 +1,5 @@
 ---
-- name: Create config directories to include – if any
+- name: Create config directories to include - if any
   become: yes
   file:
     dest: "{{ i2_conf_dir }}/{{ item }}"
