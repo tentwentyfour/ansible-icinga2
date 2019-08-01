@@ -77,13 +77,13 @@ if ({{ condition }}) {
 
 template {{ item.key }} "{{ object_name }}" {
 {% if params.attributes is defined -%}
-{{ attributes.attrs(params.attributes) -}}
+{{ attributes.attrs(params.attributes) }}
 {% endif %}
 {% if params.variables is defined -%}
-{{ attributes.attrs(params.variables, 'vars.') -}}
+{{ attributes.attrs(params.variables, 'vars.') }}
 {% endif -%}
 {% if params.attributes is not defined and params.variables is not defined %}
-{{ attributes.attrs(params) -}}
+{{ attributes.attrs(params) }}
 {% endif %}
 {% if params.conditionals is defined -%}
 {% for conditional in params.conditionals %}
