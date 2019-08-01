@@ -31,20 +31,20 @@ apply {{ item.key }} "{{ rule_name }}{% if iterator is defined and iterator is n
 {
 
 {% if (params.attributes is not defined) and (params.variables is not defined) %}
-{{ attributes.attrs(params) -}}
+{{ attributes.attrs(params) }}
 {% endif %}
 {% if params.variables is defined -%}
-{{ attributes.attrs(params.variables, 'vars.', '=', iterator) -}}
-{%- endif %}
+{{ attributes.attrs(params.variables, 'vars.', '=', iterator) }}
+{% endif %}
 
-{% if params.conditionals is defined -%}
+{% if params.conditionals is defined %}
 {% for conditional in params.conditionals %}
 {% set condition = conditional.pop('condition') %}
 if ({{ condition }}) {
-  {{ attributes.attrs(conditional) -}}
+  {{ attributes.attrs(conditional) }}
 }
 {% endfor %}
-{% endif -%}
+{% endif %}
 
 {% if operators is defined and operators is not none and operators|length -%}
     {%- for operator, params in operators.items() %}
@@ -62,7 +62,7 @@ if ({{ condition }}) {
 
 {% if params.attributes is defined -%}
 {{ attributes.attrs(params.attributes) -}}
-{%- endif %}
+{% endif %}
 
 }
 {% endfor %}
