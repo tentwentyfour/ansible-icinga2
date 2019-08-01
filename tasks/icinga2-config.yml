@@ -126,7 +126,9 @@
     marker: "// {mark} Ansible managed block for {{ item }} (client)"
     content: "{{ lookup('template', 'templates/zone_fragment.conf.j2') }}"
   loop: "{{ groups[i2_agent_group] }}"
-  when: i2_config_master
+  when:
+    - i2_config_master
+    - hostvars[item].i2_hostname is defined
   notify: reload icinga2
 
 # This isn't very elegant but the only way I could

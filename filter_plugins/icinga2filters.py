@@ -48,7 +48,7 @@ def check_keywords(value, iterator=None):
   if value in icinga2_keywords or pattern.match(value):
     return value
 
-  pattern = re.compile(r'^v\'(.*)$')
+  pattern = re.compile(r'^v\'?([^\']+)\'?$')
   if pattern.match(value):
     return pattern.sub(r'\1', value)
 
@@ -66,10 +66,7 @@ def check_key_format(key, prefix):
   if prefix:
     return prefix + key
 
-  # pattern1 = re.compile(r'^\d')
-  # pattern2 = re.compile(r'[\. ]+')
-  # if key[:1] == '-' or pattern1.match(key) or pattern2.match(key):
-  pattern = re.compile(r'^\d+.*|.*[\. ]+.*')
+  pattern = re.compile(r'^\d+.*|.*[\.\/\\ ]+.*')
   if key[:1] == '-' or pattern.match(key):
     return '"{}"'.format(key)
 

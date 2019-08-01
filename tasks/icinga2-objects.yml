@@ -133,6 +133,9 @@
     mode: 0644
   loop: "{{ groups['all'] }}"
   register: managed_zone_hosts
+  when:
+    - hostvars[item].i2_zone is defined
+    - hostvars[item].i2_hostname is defined
   notify:
     - reload icinga2
 
@@ -151,9 +154,11 @@
 
 - name: Set fact for managed object files
   set_fact:
-    managed_object_files: "{{ managed_object_files|default([]) + [ item.dest ] }}"
+    managed_object_files: "{{ managed_object_files|default([]) + [item.dest] }}"
   loop: "{{ managed_objects }}"
-  when: i2_remove_unmanaged_objects
+  when:
+    - i2_remove_unmanaged_objects
+    - item.dest is defined
 
 - name: Removing unmanaged object files
   become: yes
