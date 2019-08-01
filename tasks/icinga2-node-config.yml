@@ -1,12 +1,12 @@
 # This file does not run on master nodes
 ---
-- name: Nodes – Check if Certificate Authority is available
+- name: Nodes - Check if Certificate Authority is available
   become: yes
   stat:
     path: "{{ i2_pki_path }}/trusted_parent.crt"
   register: trusted_authority
 
-- name: Nodes – Initialize Certificate Directory
+- name: Nodes - Initialize Certificate Directory
   become: yes
   file:
     path: "{{ i2_pki_path }}"
@@ -16,14 +16,14 @@
     mode: 0700
 
 # This command must be run as privileged user or the icinga user
-- name: Nodes – Generate Client Ticket on Master
+- name: Nodes - Generate Client Ticket on Master
   become: yes
   command: icinga2 pki ticket --cn {{ i2_hostname }}
   register: pki_ticket
   delegate_to: "{{ configuration_master }}"
   when: client_certificate.stat.exists is sameas false
 
-- name: Nodes – Generate self-signed certificate for first-contact with parent
+- name: Nodes - Generate self-signed certificate for first-contact with parent
   become: yes
   command: >
     icinga2 pki new-cert --cn {{ i2_hostname }}
@@ -31,7 +31,7 @@
       --cert {{ i2_pki_file }}
   when: trusted_authority.stat.exists is sameas false
 
-- name: Nodes – Retrieve Public Certificate from Parent Node
+- name: Nodes - Retrieve Public Certificate from Parent Node
   become: yes
   command: >
     icinga2 pki save-cert
@@ -41,7 +41,7 @@
       --host {{ hostvars[i2_peer_nodes[0]]['i2_hostname'] }}
   when: trusted_authority.stat.exists is sameas false
 
-- name: Nodes – Retrieved signed certificate and set-up agent (Top-Down)
+- name: Nodes - Retrieved signed certificate and set-up agent (Top-Down)
   become: yes
   command: >
     icinga2 node setup
@@ -58,7 +58,7 @@
   when: i2_connection_direction == 'top-down' and not client_certificate.stat.exists
   notify: restart icinga2
 
-- name: Nodes – Retrieved signed certificate and set-up agent (Bottom-Up)
+- name: Nodes - Retrieved signed certificate and set-up agent (Bottom-Up)
   become: yes
   command: >
     "icinga2 node setup
