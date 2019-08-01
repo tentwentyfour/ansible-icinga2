@@ -36,7 +36,7 @@ def check_keywords(value, iterator=None):
 
   Finally, values that are prefixed with "v'" will be return unquoted. That
   is probably a better trade-off than to just assume some strings –
-  such as "name" – to always represent variables.
+  such as "name" - to always represent variables.
   """
   if type(value) is int:
     return value

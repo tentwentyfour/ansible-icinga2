@@ -43,6 +43,7 @@
     state: enabled
     permanent: yes
     immediate: yes
+#   ignore_errors: yes
   when:
     - i2_manage_firewall
     - i2_master or i2_satellite or i2_connection_direction == 'top-down'
