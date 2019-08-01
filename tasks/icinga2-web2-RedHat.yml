@@ -80,6 +80,8 @@
     state: enabled
     permanent: yes
     immediate: yes
+  when: i2_manage_firewall
+
 
 - name: "RedHat - Firewalld: allow connections to httpd"
   become: yes
@@ -89,6 +91,7 @@
     state: enabled
     permanent: yes
     immediate: yes
+  when: i2_manage_firewall
 
 - name: Icingaweb2 - Ensure httpd is running
   command: /usr/bin/true
