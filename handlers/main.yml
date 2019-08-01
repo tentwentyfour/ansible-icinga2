@@ -44,7 +44,7 @@
     state: restarted
   when: i2_manage_service
 
-- name: (re-)start php-fpm
+- name: restart php-fpm
   become: yes
   service:
     name: rh-php72-php-fpm
@@ -53,7 +53,7 @@
   when: i2_manage_service
   listen: restart redhat httpd
 
-- name: (re-)start httpd
+- name: restart httpd
   become: yes
   service:
     name: httpd
@@ -62,7 +62,7 @@
   when: i2_manage_service
   listen: restart redhat httpd
 
-- name: (re-)start apache2
+- name: restart apache2
   become: yes
   service:
     name: apache2
