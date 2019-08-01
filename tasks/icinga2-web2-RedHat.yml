@@ -1,12 +1,12 @@
 ---
-- name: IcingaWeb2 (CentOs) – Install Centos Release SCL
+- name: IcingaWeb2 (CentOs) - Install Centos Release SCL
   become: yes
   package:
     name: centos-release-scl
     state: present
   when: ansible_distribution == "CentOS"
 
-- name: IcingaWeb2 (RedHat) – Install RhScl subscription requirement
+- name: IcingaWeb2 (RedHat) - Install RhScl subscription requirement
   fail:
     msg: "Please enable SCL repos: subscription-manager repos --enable rhel-server-rhscl-{{ ansible_facts.ansible_distribution_major_version }}-rpms"
   when: ansible_distribution == "RedHat"
@@ -14,7 +14,7 @@
 # We're installing httpd from base because icingaweb2's
 # configuration files are also installed into the default
 # configuration location in /etc/httpd/
-- name: IcingaWeb2 (RedHat) – Install PHP fpm and mysqlnd
+- name: IcingaWeb2 (RedHat) - Install PHP fpm and mysqlnd
   become: yes
   yum:
     name:
@@ -27,7 +27,7 @@
       - base
       - centos-sclo-rh
 
-- name: Icingaweb2 (RedHat) – Install additional PHP modules
+- name: Icingaweb2 (RedHat) - Install additional PHP modules
   become: yes
   yum:
     name:
@@ -41,7 +41,7 @@
       - centos-sclo-rh
   when: i2_webui_php_all
 
-- name: IcingaWeb2 (RedHat) – Replace timezone in php.ini
+- name: IcingaWeb2 (RedHat) - Replace timezone in php.ini
   become: yes
   register: lineinfile
   lineinfile:
@@ -50,7 +50,7 @@
     line: 'date.timezone = "{{ i2_timezone }}"'
   notify: restart php-fpm
 
-- name: IcingaWeb2 (RedHat) – Install IcingaWeb2 on RedHat OS family
+- name: IcingaWeb2 (RedHat) - Install IcingaWeb2 on RedHat OS family
   become: yes
   yum:
     name:
@@ -64,7 +64,7 @@
     update_cache: yes
   tags: icinga2-ansible-web2-ui-install
 
-- name: IcingaWeb2 (RedHat) – Install SELinux policies for Icingaweb2
+- name: IcingaWeb2 (RedHat) - Install SELinux policies for Icingaweb2
   become: yes
   yum:
     name: icingaweb2-selinux
@@ -72,7 +72,7 @@
     enablerepo: ICINGA-release
   when: selinux.stdout == "Enforcing"
 
-- name: "RedHat – Firewalld: allow connections to httpd"
+- name: "RedHat - Firewalld: allow connections to httpd"
   become: yes
   firewalld:
     zone: public
@@ -81,7 +81,7 @@
     permanent: yes
     immediate: yes
 
-- name: "RedHat – Firewalld: allow connections to httpd"
+- name: "RedHat - Firewalld: allow connections to httpd"
   become: yes
   firewalld:
     zone: public
@@ -90,7 +90,7 @@
     permanent: yes
     immediate: yes
 
-- name: Icingaweb2 – Ensure httpd is running
+- name: Icingaweb2 - Ensure httpd is running
   command: /usr/bin/true
   notify: restart redhat httpd
 
