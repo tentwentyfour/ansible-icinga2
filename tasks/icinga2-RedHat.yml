@@ -6,10 +6,6 @@
     state: present
   when: i2_manage_repository
 
-- name: Icingaweb2 (Redhat) - Check if SELinux is enabled
-  command: /usr/sbin/getenforce
-  register: selinux
-
 - name: RedHat - Add Icinga 2 repository
   become: yes
   yum_repository:
