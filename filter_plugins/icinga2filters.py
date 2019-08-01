@@ -7,7 +7,6 @@ icinga2_keywords = [
   'DataDir',
   'LogDir',
   'CacheDir',
-  'SpoolDir',
   'InitRunDir',
   'ZonesDir',
   'PluginContribDir',
@@ -18,14 +17,16 @@ icinga2_keywords = [
   'Up',
   'Down',
   'Problem',
-  'Acknowledgement',
   'Recovery',
+  'Acknowledgement',
   'Custom',
   'FlappingStart',
   'FlappingEnd',
   'DowntimeStart',
   'DowntimeEnd',
   'DowntimeRemoved',
+  'SpoolDir',
+  'TicketSalt',
 ]
 
 def check_keywords(value, iterator=None):
