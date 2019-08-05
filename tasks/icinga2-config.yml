@@ -62,7 +62,7 @@
     mode: 0644
   when: not zones_sample_file.stat.exists
 
-- name: Set-up Zone and Endpoints for localhost
+- name: Set-up ZoneName and NodeName Endpoint (zones.conf)
   become: yes
   template:
     src: default_zone_fragment.j2
@@ -74,7 +74,7 @@
   when: i2_master or client_certificate.stat.exists
   notify: reload icinga2
 
-# icinga2 node setup takes care of this for us on first-run, but only on nodes
+# "icinga2 node setup" takes care of this for us on first-run, but only on nodes
 # (including nodes that will become satellites), not on masters.
 # We use the presence of PKI-related files to determine whether
 # this is a first run or a follow-up run.

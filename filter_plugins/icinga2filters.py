@@ -49,7 +49,7 @@ def check_keywords(value, iterator=None):
   if value in icinga2_keywords or pattern.match(value):
     return value
 
-  pattern = re.compile(r'^v\'?([^\']+)\'?$')
+  pattern = re.compile(r'^v\'([^\']+)$')
   if pattern.match(value):
     return pattern.sub(r'\1', value)
 
