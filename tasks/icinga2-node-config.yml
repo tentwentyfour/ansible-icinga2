@@ -21,7 +21,7 @@
   command: icinga2 pki ticket --cn {{ i2_hostname }}
   register: pki_ticket
   delegate_to: "{{ configuration_master }}"
-  when: client_certificate.stat.exists is sameas false
+  when: i2_certificate_signed_by_ca is sameas false
 
 - name: Nodes - Generate self-signed certificate for first-contact with parent
   become: yes
@@ -41,7 +41,7 @@
       --host {{ hostvars[i2_peer_nodes[0]]['i2_hostname'] }}
   when: trusted_authority.stat.exists is sameas false
 
-- name: Nodes - Retrieved signed certificate and set-up agent (Top-Down)
+- name: Nodes - Retrieve signed certificate and set-up agent (Top-Down)
   become: yes
   command: >
     icinga2 node setup
@@ -55,24 +55,31 @@
       --accept-commands
       --accept-config
       --disable-confd
-  when: i2_connection_direction == 'top-down' and not client_certificate.stat.exists
+  when: i2_connection_direction == 'top-down' and not i2_certificate_signed_by_ca
   notify: restart icinga2
 
-- name: Nodes - Retrieved signed certificate and set-up agent (Bottom-Up)
+- name: Collect endpoints for bottom-up config
+  set_fact:
+    endpoints: "{{ endpoints|default('') }}
+     --endpoint {{ hostvars[item]['i2_hostname'] }},{{ hostvars[item]['ansible_facts']['default_ipv4']['address'] }},{{ i2_api_port }}"
+  loop: "{{ i2_peer_nodes }}"
+  when: i2_connection_direction == 'bottom-up' and not i2_certificate_signed_by_ca
+
+- name: Nodes - Retrieve signed certificate and set-up agent (Bottom-Up)
   become: yes
   command: >
-    "icinga2 node setup
+    icinga2 node setup
       --cn {{ i2_hostname }}
-      --ticket {{ pki_ticket.stdout }}
-      --endpoint {{ hostvars[i2_peer_nodes[0]]['i2_hostname'] }},
-      {{ hostvars[i2_peer_nodes[0]]['ansible_facts']['default_ipv4']['address'] }},
-      {{ i2_api_port }}
+      --ticket {{ pki_ticket.stdout }} {{ endpoints }}
       --trustedcert {{ i2_pki_path }}/trusted_parent.crt
       --zone {{ i2_zonename }}
       --parent_zone {{ i2_zone }}
       --parent_host {{ hostvars[i2_peer_nodes[0]]['i2_hostname'] }}
       --accept-commands
       --accept-config
-      --disable-confd"
-  when: i2_connection_direction == 'bottom-up' and not client_certificate.stat.exists
+      --disable-confd
+  when:
+    - i2_connection_direction == 'bottom-up'
+    - not i2_certificate_signed_by_ca
+    - endpoints is defined
   notify: restart icinga2

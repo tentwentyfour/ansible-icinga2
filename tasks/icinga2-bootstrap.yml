@@ -32,6 +32,22 @@
   stat:
     path: "{{ i2_pki_file }}"
   register: client_certificate
+  when: not i2_master
+
+- name: Check if Client Certificate is signed by our CA
+  become: yes
+  shell: >-
+    openssl x509 -in {{ i2_pki_file }} -noout -text | grep Issuer
+  register: certificate_authority
+  ignore_errors: yes
+  when: not i2_master and client_certificate.stat.exists
+
+- name: Set certificate authority fact
+  set_fact:
+    i2_certificate_signed_by_ca: yes
+  when:
+    - certificate_authority.changed
+    - "'Icinga CA' in certificate_authority.stdout"
 
 - name: Icingaweb2 (Redhat) - Check if SELinux is enabled
   command: /usr/sbin/getenforce

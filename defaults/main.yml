@@ -47,6 +47,7 @@ i2_default_agent_group: agents
 
 i2_ca_path: /var/lib/icinga2/ca
 i2_pki_path: /var/lib/icinga2/certs
+i2_certificate_signed_by_ca: no
 
 i2_zones_dir: "{{ i2_conf_dir }}/zones.d"
 i2_global_dir: "{{ i2_zones_dir }}/global-templates"

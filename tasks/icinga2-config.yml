@@ -71,7 +71,7 @@
     group: "{{ i2_group }}"
     mode: 0644
     backup: "{{ i2_keep_backups }}"
-  when: i2_master or client_certificate.stat.exists
+  when: i2_master or i2_certificate_signed_by_ca
   notify: reload icinga2
 
 # "icinga2 node setup" takes care of this for us on first-run, but only on nodes
@@ -87,7 +87,7 @@
     dest: "{{ i2_conf_dir }}/zones.conf"
     marker: "// {mark} Ansible managed block for peers or parents"
     content: "{{ lookup('template', 'templates/peer_zone_fragment.conf.j2') }}"
-  when: i2_master or client_certificate.stat.exists
+  when: i2_master or i2_certificate_signed_by_ca
 
 - name: Set-up remote Zones and Endpoints on Masters
   become: yes
