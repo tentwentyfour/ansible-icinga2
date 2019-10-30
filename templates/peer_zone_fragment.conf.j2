@@ -8,7 +8,7 @@ object Endpoint {{ peer_node|icinga_vars }} {
 #}
 {% if i2_connection_direction == 'bottom-up' or (i2_master and hostvars[peer_node].i2_master)  %}
   host = "{{ hostvars[peer_node].ansible_facts.default_ipv4.address }}"
-  port = "{{ hostvars[peer_node].i2_api_port }}"
+  port = "{{ hostvars[peer_node].i2_api_port|default(i2_api_port) }}"
 {% endif %}
 }
 {% endfor %}
