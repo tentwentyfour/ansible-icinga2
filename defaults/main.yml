@@ -44,6 +44,12 @@ i2_zonename: "{{ ansible_fqdn }}"
 i2_default_satellite_group: satellites
 i2_default_master_group: masters
 i2_default_agent_group: agents
+i2_peer_nodes: >-
+  {%- if i2_master -%}
+  {{ groups[i2_master_group] | difference([inventory_hostname]) }}
+  {%- elif i2_satellite -%}
+  {{ groups[i2_satellite_group] | difference([inventory_hostname]) }}
+  {%- endif -%}
 
 i2_ca_path: /var/lib/icinga2/ca
 i2_pki_path: /var/lib/icinga2/certs
