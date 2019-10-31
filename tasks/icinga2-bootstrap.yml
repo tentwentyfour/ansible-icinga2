@@ -43,6 +43,8 @@
   set_fact:
     i2_api_port: >-
       {{ hostvars[item].i2_api_port|default(i2_api_port) }}
+    i2_api_host: >-
+      {{ hostvars[item].i2_api_host|default(hostvars[item].ansible_facts.default_ipv4.address) }}
     i2_hostname: >-
       {{ hostvars[item].i2_hostname|default(hostvars[item].ansible_fqdn) }}
     i2_zonename: >-
@@ -60,6 +62,29 @@
     {{ groups[i2_master_group]|default([])
     + groups[i2_satellite_group]|default([])
     + groups[i2_agent_group]|default([]) }}
+
+- name: Determine parent, peer and child nodes
+  set_fact:
+    i2_child_nodes: >-
+      {{ hostvars | dict2items
+      | json_query("[?value.i2_zone==" + "'" + i2_zonename + "'].key")
+      | sort }}
+    i2_child_zonenames: >-
+      {{ hostvars | dict2items
+      | json_query("[?value.i2_zone==" + "'" + i2_zonename + "'].value.i2_zonename")
+      | sort
+      | unique }}
+    i2_parent_nodes: >-
+      {%- if i2_zone is defined -%}
+      {{ hostvars | dict2items
+      | json_query("[?value.i2_zonename==" + "'" + i2_zone + "'].key") | list
+      }}
+      {%- else %}[]{% endif -%}
+    i2_peer_nodes: >-
+      {{ hostvars | dict2items
+      | json_query("[?value.i2_zonename==" + "'" + i2_zonename + "'].key")
+      | sort }}
+    configuration_master: "{{ groups[i2_master_group][0] }}"
 
 - name: Determine configuration master node name
   set_fact:
