@@ -74,13 +74,6 @@
   when: i2_master or i2_certificate_signed_by_ca
   notify: reload icinga2
 
-- name: Get the facts of the peer nodes
-  setup:
-  delegate_to: "{{ item }}"
-  delegate_facts: True
-  loop: "{{ i2_peer_nodes }}"
-  when: hostvars[item][ansible_default_ipv4] is not defined
-
 # "icinga2 node setup" takes care of this for us on first-run, but only on nodes
 # (including nodes that will become satellites), not on masters.
 # We use the presence of PKI-related files to determine whether
