@@ -65,7 +65,7 @@
 - name: Set-up ZoneName and NodeName Endpoint (zones.conf)
   become: yes
   template:
-    src: default_zone_fragment.j2
+    src: zones.conf.j2
     dest: "{{ i2_conf_dir }}/zones.conf"
     owner: "{{ i2_user }}"
     group: "{{ i2_group }}"
@@ -74,78 +74,36 @@
   when: i2_master or i2_certificate_signed_by_ca
   notify: reload icinga2
 
-# "icinga2 node setup" takes care of this for us on first-run, but only on nodes
-# (including nodes that will become satellites), not on masters.
-# We use the presence of PKI-related files to determine whether
-# this is a first run or a follow-up run.
-- name: Set-up zones.conf on multi-master peers, satellites and agents
-  become: yes
-  blockinfile:
-    create: yes
-    owner: "{{ i2_user }}"
-    group: "{{ i2_group }}"
-    dest: "{{ i2_conf_dir }}/zones.conf"
-    marker: "// {mark} Ansible managed block for peers or parents"
-    content: "{{ lookup('template', 'templates/peer_zone_fragment.conf.j2') }}"
-  when: i2_master or i2_certificate_signed_by_ca
+#- name: Set-up remote Zones and Endpoints for Satellites
+  #become: yes
+  #blockinfile:
+    #create: yes
+    #owner: "{{ i2_user }}"
+    #group: "{{ i2_group }}"
+    #dest: "{{ i2_zones_dir }}/{{ hostvars[item].i2_zone }}/endpoints.conf"
+    #marker: "// {mark} Ansible managed block for {{ item }} (client)"
+    #content: "{{ lookup('template', 'templates/zone_fragment.conf.j2') }}"
+  #loop: "{{ groups[i2_agent_group]|default([]) }}"
+  #when:
+    #- i2_config_master
+    #- hostvars[item].i2_hostname is defined
+  #notify: reload icinga2
 
-- name: Set-up remote Zones and Endpoints on Masters
-  become: yes
-  blockinfile:
-    create: yes
-    owner: "{{ i2_user }}"
-    group: "{{ i2_group }}"
-    dest: "{{ i2_conf_dir }}/zones.conf"
-    marker: "// {mark} Ansible managed block for {{ item }} (satellite)"
-    content: "{{ lookup('template', 'templates/zone_fragment.conf.j2') }}"
-  loop: "{{ groups[i2_satellite_group]|default([]) }}"
-  when: i2_master
-  notify: reload icinga2
-
-- name: Add global-templates zone to zones.conf
-  become: yes
-  blockinfile:
-    create: yes
-    owner: "{{ i2_user }}"
-    group: "{{ i2_group }}"
-    dest: "{{ i2_conf_dir }}/zones.conf"
-    marker: "// {mark} Ansible managed block for global-templates"
-    block: |
-      object Zone "global-templates" {
-        global = true
-      }
-  when: i2_master or client_certificate.stat.exists
-
-- name: Set-up remote Zones and Endpoints for Satellites
-  become: yes
-  blockinfile:
-    create: yes
-    owner: "{{ i2_user }}"
-    group: "{{ i2_group }}"
-    dest: "{{ i2_zones_dir }}/{{ hostvars[item].i2_zone }}/endpoints.conf"
-    marker: "// {mark} Ansible managed block for {{ item }} (client)"
-    content: "{{ lookup('template', 'templates/zone_fragment.conf.j2') }}"
-  loop: "{{ groups[i2_agent_group]|default([]) }}"
-  when:
-    - i2_config_master
-    - hostvars[item].i2_hostname is defined
-  notify: reload icinga2
-
-# This isn't very elegant but the only way I could
-# think of to make this work in the short term.
-- name: Set fact for managed endpoint files
-  set_fact:
-    managed_object_files: "{{
-        (
-        managed_object_files|default([])
-        + [
-            i2_zones_dir
-            + '/'
-            + hostvars[item].i2_zone
-            + '/endpoints.conf'
-        ]
-        )
-        | unique
-      }}"
-  loop: "{{ groups[i2_agent_group]|default([]) }}"
-  when: i2_remove_unmanaged_objects
+## This isn't very elegant but the only way I could
+## think of to make this work in the short term.
+#- name: Set fact for managed endpoint files
+  #set_fact:
+    #managed_object_files: "{{
+        #(
+        #managed_object_files|default([])
+        #+ [
+            #i2_zones_dir
+            #+ '/'
+            #+ hostvars[item].i2_zone
+            #+ '/endpoints.conf'
+        #]
+        #)
+        #| unique
+      #}}"
+  #loop: "{{ groups[i2_agent_group]|default([]) }}"
+  #when: i2_remove_unmanaged_objects
