@@ -98,7 +98,7 @@
     dest: "{{ i2_conf_dir }}/zones.conf"
     marker: "// {mark} Ansible managed block for {{ item }} (satellite)"
     content: "{{ lookup('template', 'templates/zone_fragment.conf.j2') }}"
-  loop: "{{ groups[i2_satellite_group] }}"
+  loop: "{{ groups[i2_satellite_group]|default([]) }}"
   when: i2_master
   notify: reload icinga2
 
@@ -125,7 +125,7 @@
     dest: "{{ i2_zones_dir }}/{{ hostvars[item].i2_zone }}/endpoints.conf"
     marker: "// {mark} Ansible managed block for {{ item }} (client)"
     content: "{{ lookup('template', 'templates/zone_fragment.conf.j2') }}"
-  loop: "{{ groups[i2_agent_group] }}"
+  loop: "{{ groups[i2_agent_group]|default([]) }}"
   when:
     - i2_config_master
     - hostvars[item].i2_hostname is defined
@@ -147,5 +147,5 @@
         )
         | unique
       }}"
-  loop: "{{ groups[i2_agent_group] }}"
+  loop: "{{ groups[i2_agent_group]|default([]) }}"
   when: i2_remove_unmanaged_objects

@@ -42,7 +42,7 @@
     host: "{{ hostvars[item].ansible_facts.default_ipv4.address }}"
     priv: "{{ i2_ido_params.database }}.*:SELECT,INSERT,UPDATE,DELETE,DROP,CREATE VIEW,INDEX,EXECUTE"
     state: present
-  loop: "{{ groups[i2_master_group] }}"
+  loop: "{{ groups[i2_master_group]|default([]) }}"
   when: i2_config_master and i2_ido_backend == 'mysql'
   notify: restart icinga2
 

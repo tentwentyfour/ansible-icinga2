@@ -7,7 +7,9 @@
     owner: "{{ i2_user }}"
     group: "{{ i2_group }}"
     mode: 0755
-  loop: "{{ groups[i2_satellite_group] + groups[i2_master_group] }}"
+  loop: >-
+    {{ groups[i2_satellite_group]|default([])
+    + groups[i2_master_group]|default([]) }}
 
 # Warning: This will result in duplicate path entries if
 # e.g. you have a ha-master or ha-satellite setup.
@@ -16,7 +18,9 @@
     used_zones: "{{ used_zones|default([ i2_global_dir ])
       + [ i2_zones_dir + '/' + hostvars[item].i2_zonename ]
     }}"
-  loop: "{{ groups[i2_satellite_group] + groups[i2_master_group] }}"
+  loop: >-
+    {{ groups[i2_satellite_group]|default([])
+    + groups[i2_master_group]|default([]) }}
 
 - name: Collect all pre-existing objects
   become: yes
@@ -92,7 +96,8 @@
     owner: "{{ i2_user }}"
     group: "{{ i2_group }}"
     mode: 0644
-  loop: "{{ groups[i2_satellite_group] + [configuration_master] }}"
+  loop: >-
+    {{ groups[i2_satellite_group]|default([]) + [configuration_master] }}
   register: managed_zone_templates
   notify:
     - reload icinga2
@@ -105,7 +110,8 @@
     owner: "{{ i2_user }}"
     group: "{{ i2_group }}"
     mode: 0644
-  loop: "{{ groups[i2_satellite_group] + [configuration_master] }}"
+  loop: >-
+    {{ groups[i2_satellite_group]|default([]) + [configuration_master] }}
   register: managed_zone_objects
   notify:
     - reload icinga2
@@ -118,7 +124,8 @@
     owner: "{{ i2_user }}"
     group: "{{ i2_group }}"
     mode: 0644
-  loop: "{{ groups[i2_satellite_group] + [configuration_master] }}"
+  loop: >-
+    {{ groups[i2_satellite_group]|default([]) + [configuration_master] }}
   register: managed_zone_apply_rules
   notify:
     - reload icinga2
