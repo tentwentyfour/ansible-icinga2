@@ -21,7 +21,7 @@
  # which we don't get if a --limit is in place
 - name: Set default hostvars for Icinga masters
   set_fact:
-    i2_zone: >-
+    i2_master: >-
       {{ hostvars[item].i2_master|default(True) }}
   run_once: True
   delegate_facts: True
