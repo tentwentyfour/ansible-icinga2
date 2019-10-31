@@ -1,31 +1,69 @@
 ---
-# Copying role-vars to host-vars
-# Might be replaced by using default() where required,
-# e.g. "hostvars[host]['variabl_key']|default(variable)"
-# but is that actually a better way?
-- name: Set hostname from defaults
-  set_fact:
-    i2_hostname: "{{ i2_hostname }}"
+# When a --limit is in place only the facts of
+# the selected hosts are retrieved and we need
+# the facts of the other nodes as they are
+# used as defaults of variables used in the
+# templates
+- name: Gather Facts of the other Icinga nodes
+  setup:
+  run_once: True
+  delegate_facts: True
+  delegate_to: "{{ item }}"
+  loop: >-
+    {{ groups[i2_master_group]|default([])
+    + groups[i2_satellite_group]|default([])
+    + groups[i2_agent_group]|default([]) }}
+  when: hostvars[item].ansible_fqdn is not defined
 
-- name: Set zonename from defaults
+ # Copying role-vars to host-vars
+ # We do this in a loop over all the nodes as we
+ # need the variables of other nodes in the templates
+ # which we don't get if a --limit is in place
+- name: Set default hostvars for Icinga masters
   set_fact:
-    i2_zonename: "{{ i2_zonename }}"
+    i2_zone: >-
+      {{ hostvars[item].i2_master|default(True) }}
+  run_once: True
+  delegate_facts: True
+  delegate_to: "{{ item }}"
+  loop: "{{ groups[i2_master_group]|default([]) }}"
+
+- name: Set default hostvars for Icinga satellites
+  set_fact:
+    i2_master: >-
+      {{ hostvars[item].i2_master|default(False) }}
+    i2_zone: >-
+      {{ hostvars[item].i2_zone|default('master') }}
+  run_once: True
+  delegate_facts: True
+  delegate_to: "{{ item }}"
+  loop: "{{ groups[i2_satellite_group]|default([]) }}"
+
+- name: Set default hostvars for all Icinga nodes
+  set_fact:
+    i2_api_port: >-
+      {{ hostvars[item].i2_api_port|default(i2_api_port) }}
+    i2_hostname: >-
+      {{ hostvars[item].i2_hostname|default(hostvars[item].ansible_fqdn) }}
+    i2_zonename: >-
+      {{ hostvars[item].i2_zonename|default(hostvars[item].ansible_fqdn) }}
+    i2_templates: >-
+      {{ hostvars[item].i2_templates|default(i2_templates) }}
+    i2_objects: >-
+      {{ hostvars[item].i2_objects|default(i2_objects) }}
+    i2_apply_rules: >-
+      {{ hostvars[item].i2_apply_rules|default(i2_apply_rules) }}
+  run_once: True
+  delegate_facts: True
+  delegate_to: "{{ item }}"
+  loop: >-
+    {{ groups[i2_master_group]|default([])
+    + groups[i2_satellite_group]|default([])
+    + groups[i2_agent_group]|default([]) }}
 
 - name: Determine configuration master node name
   set_fact:
     configuration_master: "{{ groups[i2_master_group][0] }}"
-
-- name: Copy custom templates into hostvars
-  set_fact:
-    i2_templates: "{{ i2_templates }}"
-
-- name: Copy custom objects into hostvars
-  set_fact:
-    i2_objects: "{{ i2_objects }}"
-
-- name: Copy custom apply rules into hostvars
-  set_fact:
-    i2_apply_rules: "{{ i2_apply_rules }}"
 
 - name: Check if Client Certificates exist
   become: yes
