@@ -23,6 +23,8 @@
   set_fact:
     i2_master: >-
       {{ hostvars[item].i2_master|default(True) }}
+    i2_satellite: >-
+      {{ hostvars[item].i2_satellite|default(False) }}
   run_once: True
   delegate_facts: True
   delegate_to: "{{ item }}"
@@ -32,6 +34,8 @@
   set_fact:
     i2_master: >-
       {{ hostvars[item].i2_master|default(False) }}
+    i2_satellite: >-
+      {{ hostvars[item].i2_satellite|default(True) }}
     i2_zone: >-
       {{ hostvars[item].i2_zone|default('master') }}
   run_once: True
