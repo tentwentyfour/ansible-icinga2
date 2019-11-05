@@ -20,7 +20,7 @@
   become: yes
   command: icinga2 pki ticket --cn {{ i2_hostname }}
   register: pki_ticket
-  delegate_to: "{{ configuration_master }}"
+  delegate_to: "{{ i2_configuration_master }}"
   when: i2_certificate_signed_by_ca is sameas false
 
 - name: Nodes - Generate self-signed certificate for first-contact with parent

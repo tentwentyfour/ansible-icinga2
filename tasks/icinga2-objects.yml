@@ -97,7 +97,7 @@
     group: "{{ i2_group }}"
     mode: 0644
   loop: >-
-    {{ groups[i2_satellite_group]|default([]) + [configuration_master] }}
+    {{ groups[i2_satellite_group]|default([]) + [i2_configuration_master] }}
   register: managed_zone_templates
   notify:
     - reload icinga2
@@ -111,7 +111,7 @@
     group: "{{ i2_group }}"
     mode: 0644
   loop: >-
-    {{ groups[i2_satellite_group]|default([]) + [configuration_master] }}
+    {{ groups[i2_satellite_group]|default([]) + [i2_configuration_master] }}
   register: managed_zone_objects
   notify:
     - reload icinga2
@@ -125,7 +125,7 @@
     group: "{{ i2_group }}"
     mode: 0644
   loop: >-
-    {{ groups[i2_satellite_group]|default([]) + [configuration_master] }}
+    {{ groups[i2_satellite_group]|default([]) + [i2_configuration_master] }}
   register: managed_zone_apply_rules
   notify:
     - reload icinga2

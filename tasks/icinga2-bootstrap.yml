@@ -88,11 +88,6 @@
       {{ hostvars | dict2items
       | json_query("[?value.i2_zonename==" + "'" + i2_zonename + "'].key")
       | sort }}
-    configuration_master: "{{ groups[i2_master_group][0] }}"
-
-- name: Determine configuration master node name
-  set_fact:
-    configuration_master: "{{ groups[i2_master_group][0] }}"
 
 - name: Check if Client Certificates exist
   become: yes

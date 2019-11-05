@@ -22,3 +22,5 @@ i2_global_apply_rules: "{{ i2_custom_global_apply_rules }}"
 
 i2_ca_file: "{{ i2_ca_path }}/ca.crt"
 i2_pki_file: "{{ i2_pki_path }}/{{ i2_hostname }}.crt"
+
+i2_configuration_master: "{{ groups[i2_master_group]|sort|first }}"
