@@ -1,12 +1,12 @@
-{% macro attrs(map, prefix="", operator="=", iterator=None) %}
-  {% for k, v in map.items() %}
+{%- macro attrs(map, prefix="", operator="=", iterator=None) %}
+  {%- for k, v in map.items() %}
     {%- if v is mapping %}
       {{ mapdict(k, v, prefix, operator, iterator) | indent(width=2)}}
     {%- else %}
-      {{ eval_value(k, v, prefix, operator, iterator) }}
-    {% endif %}
-  {% endfor %}
-{% endmacro %}
+  {{ eval_value(k, v, prefix, operator, iterator) }}
+    {%- endif %}
+  {%- endfor %}
+{%- endmacro %}
 
 {% macro mapdict(key, dictionary, prefix="", operator="=", iterator=None) %}
 {{ key|icingakey(prefix) }} {{ operator }} {

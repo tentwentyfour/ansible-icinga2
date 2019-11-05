@@ -8,6 +8,6 @@ library "{{ library }}"
 
 {% for object_name, params in item.value.items() %}
 object {{ item.key }} "{{ object_name }}" {
-   {{ attributes.attrs(params) -}}
+{% if params is mapping %}{{ attributes.attrs(params) -}}{% endif %}
 }
 {% endfor %}
