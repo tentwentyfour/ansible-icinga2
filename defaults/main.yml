@@ -41,9 +41,10 @@ i2_connection_direction: 'top-down'
 
 i2_hostname: "{{ ansible_fqdn }}"
 i2_zonename: "{{ ansible_fqdn }}"
-i2_default_satellite_group: satellites
-i2_default_master_group: masters
-i2_default_agent_group: agents
+
+i2_satellite_group: satellites
+i2_master_group: masters
+i2_agent_group: agents
 
 i2_ca_path: /var/lib/icinga2/ca
 i2_pki_path: /var/lib/icinga2/certs
@@ -67,7 +68,7 @@ i2_setup_webui: no
 i2_webui_php_all: no
 i2_webui_modules_dir: "/usr/share/icingaweb2/modules"
 i2_default_timezone: "UTC"
-i2_default_webui_modules:
+i2_webui_modules:
   - map
   - cube
   - toplevelview
@@ -82,7 +83,7 @@ i2_webui_params:
 # and connect through a unix socket.
 # But you could also use an ansible_fact, such as
 # {{ ansible_facts.default_ipv4.address }}
-i2_webui_default_connectfrom:
+i2_webui_connectfrom:
   - localhost
 
 
