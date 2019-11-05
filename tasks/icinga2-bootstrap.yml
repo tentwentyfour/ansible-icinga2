@@ -99,7 +99,6 @@
   stat:
     path: "{{ i2_pki_file }}"
   register: client_certificate
-  when: not i2_master
 
 - name: Check if Client Certificate is signed by our CA
   become: yes
