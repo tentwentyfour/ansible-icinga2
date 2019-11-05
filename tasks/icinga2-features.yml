@@ -9,14 +9,44 @@
   when:
     - i2_remove_unmanaged_features
 
+- name: Enable feature configuration
+  become: yes
+  icinga2_feature:
+    name: "{{ feature_name }}"
+    state: present
+  vars:
+   feature_name: >-
+     {%- set library = item.value.pop('library', None) -%}
+     {%- if library is not none -%}
+     {{ library }}
+     {%- elif item.value.keys()|length == 1 -%}
+     {{ item.value.keys()[0] }}
+     {%- else -%}
+     {{ item.key }}
+     {%- endif -%}
+  with_dict: "{{ i2_features }}"
+  register: managed_features
+  notify:
+    - restart icinga2
+
 - name: Generate enabled feature configuration
   become: yes
   template:
     src: templates/feature-generic-template.conf.j2
-    dest: "{{ i2_features_enabled_dir }}/{{ item.key }}.conf"
+    dest: "{{ i2_features_available_dir }}/{{ feature_name }}.conf"
     owner: "{{ i2_user }}"
     group: "{{ i2_group }}"
     mode: 0644
+  vars:
+   feature_name: >-
+     {%- set library = item.value.pop('library', None) -%}
+     {%- if library is not none -%}
+     {{ library }}
+     {%- elif item.value.keys()|length == 1 -%}
+     {{ item.value.keys()[0] }}
+     {%- else -%}
+     {{ item.key }}
+     {%- endif -%}
   with_dict: "{{ i2_features }}"
   register: managed_features
   notify:
