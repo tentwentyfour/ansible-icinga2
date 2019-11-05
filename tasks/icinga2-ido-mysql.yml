@@ -43,7 +43,9 @@
     priv: "{{ i2_ido_params.database }}.*:SELECT,INSERT,UPDATE,DELETE,DROP,CREATE VIEW,INDEX,EXECUTE"
     state: present
   loop: "{{ groups[i2_master_group]|default([]) }}"
-  when: i2_config_master and i2_ido_backend == 'mysql'
+  when:
+    - inventory_hostname == i2_configuration_master
+    - i2_ido_backend == 'mysql'
   notify: restart icinga2
 
 - name: Create user for IcingaWeb2 database
@@ -56,5 +58,7 @@
     priv: "{{ i2_webui_params.database }}.*:ALL"
     state: present
   loop: "{{ i2_webui_connectfrom }}"
-  when: i2_config_master and i2_ido_backend == 'mysql'
+  when:
+    - inventory_hostname == i2_configuration_master
+    - i2_ido_backend == 'mysql'
   notify: restart icinga2

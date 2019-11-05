@@ -120,7 +120,7 @@
     owner: "{{ i2_user }}"
     group: "{{ i2_group }}"
     mode: 0755
-  when: groups['masters']|length == 1 or i2_config_master
+  when: inventory_hostname == i2_configuration_master
 
 - name: Master - Create Master Zone directory
   become: yes
@@ -130,7 +130,7 @@
     owner: "{{ i2_user }}"
     group: "{{ i2_group }}"
     mode: 0755
-  when: groups['masters']|length == 1 or i2_config_master
+  when: inventory_hostname == i2_configuration_master
 
 # Not sure how to make the location "conf.d" configurable.
 # Blerim made i2_confd an array of locations to be included.
@@ -146,7 +146,9 @@
     mode: 0644
     directory_mode: 0755
   with_dict: "{{ i2_api_users }}"
-  when: i2_config_master and i2_api_users is defined
+  when:
+    - inventory_hostname == i2_configuration_master
+    - i2_api_users is defined
   notify:
     - reload icinga2
 
@@ -155,5 +157,7 @@
     name: icinga2
     state: started
     enabled: yes
-  when: i2_manage_service and i2_config_master
+  when:
+    - inventory_hostname == i2_configuration_master
+    - i2_manage_service
 
