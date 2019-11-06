@@ -5,16 +5,27 @@
 - include_tasks: icinga2-web2-Debian.yml
   when: ansible_os_family == 'Debian'
 
+- name: Get setup token
+  become: yes
+  command: icingacli setup token create
+  args:
+    creates: /etc/icingaweb2/setup.token
+  tags: token
+
 # Todo: Only run this below when necesary
 - name: Get setup token
   become: yes
-  shell: 'icingacli setup token create | sed "s/.*token is: \(.*\)/\1/g"'
+  shell: 'icingacli setup token show | sed "s/.*token is: \(.*\)/\1/g"'
+  changed_when: no
   register: setup_token
   tags: token
 
 - name: IcingaWeb2 Installation finished
   debug:
-    msg: "The WebUI token is {{ setup_token.stdout }}, use it at http://{{ i2_hostname }}/icingaweb2/setup ({{ ansible_facts.default_ipv4.address }}) to continue the installation"
+    msg: >-
+      The WebUI token is {{ setup_token.stdout }},
+      use it at http://{{ i2_hostname }}/icingaweb2/setup
+      ({{ ansible_facts.default_ipv4.address }}) to continue the installation
   tags:
     - icinga2-ansible-web2-ui-install
     - token
