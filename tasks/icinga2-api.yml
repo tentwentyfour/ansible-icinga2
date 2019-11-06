@@ -131,7 +131,7 @@
 - name: Master - Create Master Zone directory
   become: yes
   file:
-    name: "{{ i2_zones_dir }}/{{ i2_zone }}"
+    name: "{{ i2_zones_dir }}/{{ i2_zonename }}"
     state: directory
     owner: "{{ i2_user }}"
     group: "{{ i2_group }}"
@@ -144,7 +144,7 @@
   become: yes
   blockinfile:
     create: yes
-    dest: "{{ i2_zones_dir }}/{{ i2_zone }}/api-users.conf"
+    dest: "{{ i2_zones_dir }}/{{ i2_zonename }}/api-users.conf"
     marker: "// {mark} Ansible managed block for {{ item.key }}"
     content: "{{ lookup('template', 'api_users_fragment.j2') }}"
     owner: "{{ i2_user }}"

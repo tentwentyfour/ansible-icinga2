@@ -36,8 +36,8 @@
       {{ hostvars[item].i2_master|default(False) }}
     i2_satellite: >-
       {{ hostvars[item].i2_satellite|default(True) }}
-    i2_zone: >-
-      {{ hostvars[item].i2_zone|default('master') }}
+    i2_parent_zone: >-
+      {{ hostvars[item].i2_parent_zone|default('master') }}
   run_once: True
   delegate_facts: True
   delegate_to: "{{ item }}"
@@ -78,19 +78,19 @@
   set_fact:
     i2_child_nodes: >-
       {{ hostvars | dict2items
-      | json_query("[?value.i2_zone==" + "'" + i2_zonename + "'].key")
+      | json_query("[?value.i2_parent_zone==" + "'" + i2_zonename + "'].key")
       | difference(i2_peer_nodes)
       | sort }}
     i2_child_zonenames: >-
-      {{ hostvars | dict2items
-      | json_query("[?value.i2_zone==" + "'" + i2_zonename + "'].value.i2_zonename")
+      {{ hostvars | dict2items | map(attribute='value') | list
+      | json_query("[?i2_parent_zone==" + "'" + i2_zonename + "'].i2_zonename")
       | unique
       | difference([i2_zonename])
       | sort }}
     i2_parent_nodes: >-
-      {%- if i2_zone is defined -%}
+      {%- if i2_parent_zone is defined -%}
       {{ hostvars | dict2items
-      | json_query("[?value.i2_zonename==" + "'" + i2_zone + "'].key")
+      | json_query("[?value.i2_zonename==" + "'" + i2_parent_zone + "'].key")
       | difference(i2_peer_nodes)
       | sort
       }}

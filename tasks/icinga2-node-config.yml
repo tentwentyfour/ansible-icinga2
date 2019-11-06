@@ -38,7 +38,7 @@
       --key {{ i2_pki_path }}/{{ i2_hostname }}.key
       --cert {{ i2_pki_file }}
       --trustedcert {{ i2_pki_path }}/trusted_parent.crt
-      --host {{ hostvars[i2_peer_nodes[0]]['i2_hostname'] }}
+      --host {{ hostvars[i2_parent_nodes[0]]['i2_hostname'] }}
   when: trusted_authority.stat.exists is sameas false
 
 - name: Nodes - Retrieve signed certificate and set-up agent (Top-Down)
@@ -47,11 +47,11 @@
     icinga2 node setup
       --cn {{ i2_hostname }}
       --ticket {{ pki_ticket.stdout }}
-      --endpoint {{ hostvars[i2_peer_nodes[0]]['i2_hostname'] }}
+      --endpoint {{ hostvars[i2_parent_nodes[0]]['i2_hostname'] }}
       --trustedcert {{ i2_pki_path }}/trusted_parent.crt
       --zone {{ i2_zonename }}
-      --parent_zone {{ i2_zone }}
-      --parent_host {{ hostvars[i2_peer_nodes[0]]['i2_hostname'] }}
+      --parent_zone {{ i2_parent_zone }}
+      --parent_host {{ hostvars[i2_parent_nodes[0]]['i2_api_host'] }}
       --accept-commands
       --accept-config
       --disable-confd
@@ -62,19 +62,19 @@
   set_fact:
     endpoints: "{{ endpoints|default('') }}
      --endpoint {{ hostvars[item]['i2_hostname'] }},{{ hostvars[item]['i2_api_host'] }},{{ hostvars[item]['i2_api_port'] }}"
-  loop: "{{ i2_peer_nodes }}"
+  loop: "{{ i2_parent_nodes }}"
   when: i2_connection_direction == 'bottom-up' and not i2_certificate_signed_by_ca
 
 - name: Nodes - Retrieve signed certificate and set-up agent (Bottom-Up)
   become: yes
-  command: >
+  command: >-
     icinga2 node setup
       --cn {{ i2_hostname }}
       --ticket {{ pki_ticket.stdout }} {{ endpoints }}
       --trustedcert {{ i2_pki_path }}/trusted_parent.crt
-      --zone {{ i2_zonename }}
-      --parent_zone {{ i2_zone }}
-      --parent_host {{ hostvars[i2_peer_nodes[0]]['i2_hostname'] }}
+      --zone '{{ i2_zonename }}'
+      --parent_zone '{{ i2_parent_zone }}'
+      --parent_host {{ hostvars[i2_parent_nodes[0]]['i2_api_host'] }},{{ hostvars[i2_parent_nodes[0]]['i2_api_port'] }}
       --accept-commands
       --accept-config
       --disable-confd

@@ -80,7 +80,7 @@
     #create: yes
     #owner: "{{ i2_user }}"
     #group: "{{ i2_group }}"
-    #dest: "{{ i2_zones_dir }}/{{ hostvars[item].i2_zone }}/endpoints.conf"
+    #dest: "{{ i2_zones_dir }}/{{ hostvars[item].i2_parent_zone }}/endpoints.conf"
     #marker: "// {mark} Ansible managed block for {{ item }} (client)"
     #content: "{{ lookup('template', 'templates/zone_fragment.conf.j2') }}"
   #loop: "{{ groups[i2_agent_group]|default([]) }}"
@@ -99,7 +99,7 @@
         #+ [
             #i2_zones_dir
             #+ '/'
-            #+ hostvars[item].i2_zone
+            #+ hostvars[item].i2_parent_zone
             #+ '/endpoints.conf'
         #]
         #)

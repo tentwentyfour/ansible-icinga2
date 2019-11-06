@@ -11,7 +11,7 @@ object Endpoint "{{ hostvars[item].i2_hostname }}" {
 }
 
 object Zone "{{ hostvars[item].i2_zonename }}" {
-{% if hostvars[item].i2_zone is defined and hostvars[item].i2_zone != item %}
+{% if hostvars[item].i2_parent_zone is defined and hostvars[item].i2_parent_zone != item %}
   parent = "{{ hostvars[item].i2_zone }}"
 {% endif %}
   endpoints = [ "{{ hostvars[item].i2_hostname }}" ]
