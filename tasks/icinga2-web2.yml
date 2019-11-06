@@ -5,14 +5,14 @@
 - include_tasks: icinga2-web2-Debian.yml
   when: ansible_os_family == 'Debian'
 
-- name: Get setup token
+# Todo: Only run this below when necesary
+- name: Create setup token
   become: yes
   command: icingacli setup token create
   args:
     creates: /etc/icingaweb2/setup.token
   tags: token
 
-# Todo: Only run this below when necesary
 - name: Get setup token
   become: yes
   shell: 'icingacli setup token show | sed "s/.*token is: \(.*\)/\1/g"'
