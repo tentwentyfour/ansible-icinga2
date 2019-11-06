@@ -1,26 +1,23 @@
 ---
-- name: Create Zone and per-zone Host Directories
-  become: yes
-  file:
-    name: "{{ i2_zones_dir }}/{{ hostvars[item].i2_zonename }}/hosts"
-    state: directory
-    owner: "{{ i2_user }}"
-    group: "{{ i2_group }}"
-    mode: 0755
+- name: Collect all Zones
+  set_fact:
+    used_zones: "{{ ( used_zones|default([ i2_global_dir ])
+      + [ i2_zones_dir + '/' + hostvars[item].i2_zonename ]
+      )|unique
+      }}"
   loop: >-
     {{ groups[i2_satellite_group]|default([])
     + groups[i2_master_group]|default([]) }}
 
-# Warning: This will result in duplicate path entries if
-# e.g. you have a ha-master or ha-satellite setup.
-- name: Collect all Zones
-  set_fact:
-    used_zones: "{{ used_zones|default([ i2_global_dir ])
-      + [ i2_zones_dir + '/' + hostvars[item].i2_zonename ]
-    }}"
-  loop: >-
-    {{ groups[i2_satellite_group]|default([])
-    + groups[i2_master_group]|default([]) }}
+- name: Create Zone and per-zone Host Directories
+  become: yes
+  file:
+    name: "{{ item }}/hosts"
+    state: directory
+    owner: "{{ i2_user }}"
+    group: "{{ i2_group }}"
+    mode: 0755
+  loop: "{{ used_zones }}"
 
 - name: Collect all pre-existing objects
   become: yes
