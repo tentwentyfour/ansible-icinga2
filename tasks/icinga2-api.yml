@@ -1,11 +1,30 @@
 ---
+- name: Master - Ensure CA directory exists
+  become: yes
+  file:
+    path: "{{ i2_ca_path }}"
+    state: directory
+    owner: "{{ i2_user }}"
+    group: "{{ i2_group }}"
+    mode: 0700
+
+- name: Master - Create Certificate Authority
+  become: yes
+  command: icinga2 pki new-ca
+  args:
+    creates: "{{ i2_ca_file }}"
+  when: inventory_hostname == i2_configuration_master
+
 - name: Master - Check if Public Key Infrastructure has been initialized
   become: yes
   stat:
     path: "{{ i2_ca_file }}"
   register: ca_certificate
 
-- name: Master - Create Certificate Authority and distribute it over masters
+- name: Master - Synchronize CA Cert between masters
+  when:
+    - groups['masters']|length > 1
+    - not ca_certificate.stat.exists
   block:
     - name: Create tmp directory
       tempfile:
@@ -17,14 +36,6 @@
       check_mode: no
       become: no
 
-    - name: Master - Create Certificate Authority
-      become: yes
-      run_once: true
-      command: icinga2 pki new-ca
-      args:
-        creates: "{{ i2_ca_file }}"
-      when: inventory_hostname == i2_configuration_master
-
     - name: Master - Synchronize CA Cert between masters (Fetch)
       become: yes
       delegate_to: "{{ i2_configuration_master }}"
@@ -35,18 +46,6 @@
         dest: "{{ i2_local_tmpdir.path }}/"
         flat: yes
       loop: ['ca.crt', 'ca.key']
-      when:
-        - groups['masters']|length > 1
-        - not ca_certificate.stat.exists
-
-    - name: Master - Synchronize CA between masters (Ensure ca directory exists)
-      become: yes
-      file:
-        path: "{{ i2_ca_path }}"
-        state: directory
-        owner: "{{ i2_user }}"
-        group: "{{ i2_group }}"
-        mode: 0700
 
     - name: Master - Synchronize CA between masters (Copy)
       become: yes
@@ -57,9 +56,6 @@
         group: "{{ i2_group }}"
         mode: 0644
       loop: ['ca.crt', 'ca.key']
-      when:
-        - inventory_hostname != i2_configuration_master
-        - not ca_certificate.stat.exists
 
   always:
     - name: Remove the tmp directory
@@ -72,6 +68,12 @@
       check_mode: no
       become: no
       when: i2_local_tmpdir.path is defined
+
+- name: Master - Recheck if Public Key Infrastructure has been initialized
+  become: yes
+  stat:
+    path: "{{ i2_ca_file }}"
+  register: ca_certificate
 
 - name: Master - Initialize Certificate Directory
   become: yes
@@ -89,8 +91,8 @@
     --cn {{ i2_hostname }}
     --key {{ i2_pki_path }}/{{ i2_hostname }}.key
     --csr {{ i2_pki_path }}/{{ i2_hostname }}.csr
-    --cert {{ i2_pki_path }}/{{ i2_hostname }}.crt
-  when: client_certificate.stat.exists is sameas false
+  args:
+    creates: "{{ i2_pki_path }}/{{ i2_hostname }}.csr"
 
 - name: Master - Sign Host Certificate
   become: yes
@@ -98,7 +100,11 @@
     icinga2 pki sign-csr
     --csr {{ i2_pki_path }}/{{ i2_hostname }}.csr
     --cert {{ i2_pki_path }}/{{ i2_hostname }}.crt
-  when: client_certificate.stat.exists is sameas false
+  args:
+    creates: "{{ i2_pki_path }}/{{ i2_hostname }}.crt"
+  when: ca_certificate.stat.exists
+  notify:
+    - restart icinga2
 
 - name: Master - Link CA into PKI path
   become: yes
@@ -108,7 +114,7 @@
     state: link
     owner: "{{ i2_user }}"
     group: "{{ i2_group }}"
-  when: client_certificate.stat.exists is sameas false
+  when: ca_certificate.stat.exists
   notify:
     - restart icinga2
 
