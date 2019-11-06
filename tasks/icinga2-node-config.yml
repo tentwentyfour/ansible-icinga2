@@ -61,7 +61,7 @@
 - name: Collect endpoints for bottom-up config
   set_fact:
     endpoints: "{{ endpoints|default('') }}
-     --endpoint {{ hostvars[item]['i2_hostname'] }},{{ hostvars[item]['ansible_facts']['default_ipv4']['address'] }},{{ i2_api_port }}"
+     --endpoint {{ hostvars[item]['i2_hostname'] }},{{ hostvars[item]['i2_api_host'] }},{{ hostvars[item]['i2_api_port'] }}"
   loop: "{{ i2_peer_nodes }}"
   when: i2_connection_direction == 'bottom-up' and not i2_certificate_signed_by_ca
 
