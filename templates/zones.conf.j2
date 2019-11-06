@@ -74,11 +74,22 @@ object Endpoint "{{ hostvars[item].i2_hostname }}" {
 {% endfor -%}
 
 {#
+ # The parent Zone of the current node
+ #}
+{% if i2_parent_zone is defined -%}
+object Zone "{{ i2_parent_zone }}" {
+  endpoints = [ {{ hostvars|dict2items
+  | json_query("[?value.i2_zonename==" + "'" + i2_parent_zone + "'].key")
+  | sort|map('icinga_vars')|join(', ') }} ]
+}
+
+{% endif -%}{#
  # The Zone of the current node
  #}
 object Zone "{{ i2_zonename }}" {
   endpoints = [ {{ i2_peer_nodes|map('extract', hostvars, 'i2_hostname')|map('icinga_vars')|join(', ') }} ]
-{% if i2_parent_zone is defined %} parent = {{ i2_parent_zone|icinga_vars }}{% endif %}
+{% if i2_parent_zone is defined %}  parent = {{ i2_parent_zone|icinga_vars }}
+{% endif %}
 }
 
 {#
