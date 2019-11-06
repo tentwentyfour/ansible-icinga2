@@ -78,7 +78,7 @@ object Endpoint "{{ hostvars[item].i2_hostname }}" {
  #}
 object Zone "{{ i2_zonename }}" {
   endpoints = [ {{ i2_peer_nodes|map('extract', hostvars, 'i2_hostname')|map('icinga_vars')|join(', ') }} ]
-{% if i2_zone is defined %} parent = {{ i2_zone|icinga_vars }}{% endif %}
+{% if i2_zone is defined and i2_zone != i2_zonename %} parent = {{ i2_zone|icinga_vars }}{% endif %}
 }
 
 {#

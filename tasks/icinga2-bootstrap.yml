@@ -67,27 +67,34 @@
     + groups[i2_satellite_group]|default([])
     + groups[i2_agent_group]|default([]) }}
 
-- name: Determine parent, peer and child nodes
+- name: Determine child nodes
   set_fact:
-    i2_child_nodes: >-
-      {{ hostvars | dict2items
-      | json_query("[?value.i2_zone==" + "'" + i2_zonename + "'].key")
-      | sort }}
-    i2_child_zonenames: >-
-      {{ hostvars | dict2items
-      | json_query("[?value.i2_zone==" + "'" + i2_zonename + "'].value.i2_zonename")
-      | sort
-      | unique }}
-    i2_parent_nodes: >-
-      {%- if i2_zone is defined -%}
-      {{ hostvars | dict2items
-      | json_query("[?value.i2_zonename==" + "'" + i2_zone + "'].key") | list
-      }}
-      {%- else %}[]{% endif -%}
     i2_peer_nodes: >-
       {{ hostvars | dict2items
       | json_query("[?value.i2_zonename==" + "'" + i2_zonename + "'].key")
       | sort }}
+
+- name: Determine parent and child nodes
+  set_fact:
+    i2_child_nodes: >-
+      {{ hostvars | dict2items
+      | json_query("[?value.i2_zone==" + "'" + i2_zonename + "'].key")
+      | difference(i2_peer_nodes)
+      | sort }}
+    i2_child_zonenames: >-
+      {{ hostvars | dict2items
+      | json_query("[?value.i2_zone==" + "'" + i2_zonename + "'].value.i2_zonename")
+      | unique
+      | difference([i2_zonename])
+      | sort }}
+    i2_parent_nodes: >-
+      {%- if i2_zone is defined -%}
+      {{ hostvars | dict2items
+      | json_query("[?value.i2_zonename==" + "'" + i2_zone + "'].key")
+      | difference(i2_peer_nodes)
+      | sort
+      }}
+      {%- else %}[]{% endif -%}
 
 - name: Check if Client Certificates exist
   become: yes
