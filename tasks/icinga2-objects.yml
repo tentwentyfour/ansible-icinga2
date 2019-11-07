@@ -131,14 +131,17 @@
   become: yes
   template:
     src: host_template.conf.j2
-    dest: "{{ i2_zones_dir }}/{{ hostvars[item]['i2_parent_zone'] }}/hosts/{{ hostvars[item]['i2_hostname'] }}.conf"
+    dest: "{{ i2_zones_dir }}/{{
+        hostvars[item]['i2_parent_zone']|default(hostvars[item]['i2_zonename'])
+      }}/hosts/{{ hostvars[item]['i2_hostname'] }}.conf"
     owner: "{{ i2_user }}"
     group: "{{ i2_group }}"
     mode: 0644
   loop: "{{ groups['all'] }}"
   register: managed_zone_hosts
   when:
-    - hostvars[item].i2_parent_zone is defined
+    - hostvars[item].i2_parent_zone is defined or
+      (hostvars[item].i2_master is defined and hostvars[item].i2_master)
     - hostvars[item].i2_hostname is defined
   notify:
     - reload icinga2
