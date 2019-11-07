@@ -9,12 +9,13 @@ object Host "{{ hostvars[item].i2_hostname }}" {
   {% endif -%}
   address = "{{ hostvars[item].i2_address }}"
 
+  vars.agent_endpoint = name // Follows the convention that host name == endpoint name
   vars.os = "{{ hostvars[item].ansible_system }}"
   vars.os_family = "{{ hostvars[item].ansible_os_family }}"
 
   {% if hostvars[item].i2_master is defined and hostvars[item].i2_master -%}
   // Satellite zones controlled by this master.
-  {{ attributes.eval_value('zones', groups[i2_satellite_group], 'vars.') }}
+  {{ attributes.eval_value('zones', i2_child_zones, 'vars.') }}
   {% endif %}
 
   {% if hostvars[item].i2_host_attributes is defined -%}

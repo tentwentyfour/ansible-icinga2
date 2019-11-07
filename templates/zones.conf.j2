@@ -95,10 +95,10 @@ object Zone "{{ i2_zonename }}" {
 {#
  # The child Zones of the current node
  #}
-{% for child_zonename in i2_child_zonenames -%}
-object Zone "{{ child_zonename }}" {
+{% for child_zone in i2_child_zones -%}
+object Zone "{{ child_zone }}" {
   endpoints = [ {{ hostvars|dict2items
-  | json_query("[?value.i2_zonename==" + "'" + child_zonename + "'].key")
+  | json_query("[?value.i2_zonename==" + "'" + child_zone + "'].key")
   | sort|map('icinga_vars')|join(', ') }} ]
   parent = "{{ i2_zonename }}"
 }

@@ -83,7 +83,7 @@
       | json_query("[?value.i2_parent_zone==" + "'" + i2_zonename + "'].key")
       | difference(i2_peer_nodes)
       | sort }}
-    i2_child_zonenames: >-
+    i2_child_zones: >-
       {{ hostvars | dict2items | map(attribute='value') | list
       | json_query("[?i2_parent_zone==" + "'" + i2_zonename + "'].i2_zonename")
       | unique
