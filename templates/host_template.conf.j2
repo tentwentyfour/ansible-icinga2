@@ -7,7 +7,7 @@ object Host "{{ hostvars[item].i2_hostname }}" {
   {% else -%}
   import "generic-host"
   {% endif -%}
-  address = "{{ hostvars[item].i2_api_host }}"
+  address = "{{ hostvars[item].i2_address }}"
 
   vars.os = "{{ hostvars[item].ansible_system }}"
   vars.os_family = "{{ hostvars[item].ansible_os_family }}"

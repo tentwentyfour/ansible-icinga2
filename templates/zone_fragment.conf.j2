@@ -2,10 +2,9 @@ object Endpoint "{{ hostvars[item].i2_hostname }}" {
 {#
   Masters don't connect to satellites or agents in a bottom-up set-up,
   only in a top-down scenario.
-  See peer_zone_fragment.conf.j2
 #}
 {% if i2_connection_direction == 'top-down' %}
-  host = "{{ hostvars[item].ansible_facts.default_ipv4.address }}"
+  host = "{{ hostvars[item].i2_api_host }}"
   port = "{{ i2_api_port }}"
 {% endif %}
 }

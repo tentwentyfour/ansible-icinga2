@@ -45,6 +45,8 @@
 
 - name: Set default hostvars for all Icinga nodes
   set_fact:
+    i2_address: >-
+      {{ hostvars[item].i2_address|default(hostvars[item].ansible_facts.default_ipv4.address) }}
     i2_api_port: >-
       {{ hostvars[item].i2_api_port|default(i2_api_port) }}
     i2_api_host: >-
