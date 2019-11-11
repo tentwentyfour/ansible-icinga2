@@ -4,6 +4,7 @@
 {% set library = item.value.pop('library', None) %}
 {%- if library is defined and library is not none %}
 library "{{ library }}"
+
 {% endif -%}
 
 {% for object_name, params in item.value.items() %}
