@@ -25,6 +25,17 @@
   notify: start icinga2
   when: i2_manage_package
 
+- name: RedHat - Ensure IDO is installed on the masters
+  become: yes
+  yum:
+    name: "icinga2-ido-{{ i2_ido_backend }}"
+    state: present
+  notify: start icinga2
+  when:
+    - i2_manage_package
+    - i2_ido_backend is defined
+    - inventory_hostname in groups[i2_master_group]
+
 - name: RedHat - Install additional check plug-ins
   become: yes
   yum:
