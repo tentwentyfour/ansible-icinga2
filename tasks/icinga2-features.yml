@@ -9,26 +9,6 @@
   when:
     - i2_remove_unmanaged_features
 
-- name: Enable feature configuration
-  become: yes
-  icinga2_feature:
-    name: "{{ feature_name }}"
-    state: present
-  vars:
-   feature_name: >-
-     {%- set library = item.value.pop('library', None) -%}
-     {%- if library is not none -%}
-     {{ library }}
-     {%- elif item.value.keys()|length == 1 -%}
-     {{ item.value.keys()[0] }}
-     {%- else -%}
-     {{ item.key }}
-     {%- endif -%}
-  with_dict: "{{ i2_features }}"
-  register: managed_features
-  notify:
-    - restart icinga2
-
 - name: Generate enabled feature configuration
   become: yes
   template:
@@ -39,14 +19,20 @@
     mode: 0644
   vars:
    feature_name: >-
-     {%- set library = item.value.pop('library', None) -%}
-     {%- if library is not none -%}
-     {{ library }}
-     {%- elif item.value.keys()|length == 1 -%}
-     {{ item.value.keys()[0] }}
-     {%- else -%}
-     {{ item.key }}
-     {%- endif -%}
+     {{ item.value.keys()|difference(['library'])|first|default(item.key) }}
+  with_dict: "{{ i2_features }}"
+  register: managed_features
+  notify:
+    - restart icinga2
+
+- name: Enable feature configuration
+  become: yes
+  icinga2_feature:
+    name: "{{ feature_name }}"
+    state: present
+  vars:
+   feature_name: >-
+     {{ item.value.keys()|difference(['library'])|first|default(item.key) }}
   with_dict: "{{ i2_features }}"
   register: managed_features
   notify:
