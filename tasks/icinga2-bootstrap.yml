@@ -56,11 +56,11 @@
     i2_zonename: >-
       {{ hostvars[item].i2_zonename|default(hostvars[item].ansible_fqdn) }}
     i2_templates: >-
-      {{ hostvars[item].i2_templates|default(i2_templates) }}
+      {{ hostvars[item].i2_custom_templates|default({}) }}
     i2_objects: >-
-      {{ hostvars[item].i2_objects|default(i2_objects) }}
+      {{ hostvars[item].i2_custom_objects|default({}) }}
     i2_apply_rules: >-
-      {{ hostvars[item].i2_apply_rules|default(i2_apply_rules) }}
+      {{ hostvars[item].i2_custom_apply_rules|default({}) }}
   run_once: True
   delegate_facts: True
   delegate_to: "{{ item }}"

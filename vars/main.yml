@@ -12,10 +12,6 @@ i2_default_constants:
 i2_constants: "{{ i2_default_constants | combine(i2_custom_constants) }}"
 i2_features: "{{ i2_custom_features }}"
 
-i2_templates: "{{ i2_custom_templates }}"
-i2_objects: "{{ i2_custom_objects }}"
-i2_apply_rules: "{{ i2_custom_apply_rules }}"
-
 i2_global_templates: "{{ i2_custom_global_templates }}"
 i2_global_objects: "{{ i2_custom_global_objects }}"
 i2_global_apply_rules: "{{ i2_custom_global_apply_rules }}"
