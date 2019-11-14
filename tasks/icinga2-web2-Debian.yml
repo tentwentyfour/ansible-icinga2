@@ -4,6 +4,8 @@
     name:
       - php
       - php-gd
+      - php-curl
+      - php-imagick
       - libapache2-mod-php
     state: present
 
