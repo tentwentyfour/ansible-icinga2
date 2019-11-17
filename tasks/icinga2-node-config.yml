@@ -43,7 +43,7 @@
       --key {{ i2_pki_path }}/{{ i2_hostname }}.key
       --cert {{ i2_pki_file }}
       --trustedcert {{ i2_pki_path }}/trusted_parent.crt
-      --host {{ hostvars[i2_peer_nodes[0]]['i2_hostname'] }}
+      --host {{ hostvars[i2_parent_nodes[0]]['i2_hostname'] }}
   when:
     - i2_connection_allowed
     - trusted_authority.stat.exists is sameas false
@@ -71,8 +71,8 @@
 - name: Collect endpoints for bottom-up config
   set_fact:
     endpoints: "{{ endpoints|default('') }}
-     --endpoint {{ hostvars[item]['i2_hostname'] }},{{ hostvars[item]['ansible_facts']['default_ipv4']['address'] }},{{ i2_api_port }}"
-  loop: "{{ i2_peer_nodes }}"
+     --endpoint {{ hostvars[item]['i2_hostname'] }},{{ hostvars[item]['i2_api_host'] }},{{ hostvars[item]['i2_api_port'] }}"
+  loop: "{{ i2_parent_nodes }}"
   when:
     - i2_connection_allowed
     - i2_connection_direction == 'bottom-up'
@@ -149,14 +149,14 @@
 
 - name: Nodes - Retrieve signed certificate and set-up agent (Bottom-Up)
   become: yes
-  command: >
+  command: >-
     icinga2 node setup
       --cn {{ i2_hostname }}
       --ticket {{ pki_ticket.stdout }} {{ endpoints }}
       --trustedcert {{ i2_pki_path }}/trusted_parent.crt
-      --zone {{ i2_zonename }}
-      --parent_zone {{ i2_zone }}
-      --parent_host {{ hostvars[i2_peer_nodes[0]]['i2_hostname'] }}
+      --zone '{{ i2_zonename }}'
+      --parent_zone '{{ i2_parent_zone }}'
+      --parent_host {{ hostvars[i2_parent_nodes[0]]['i2_api_host'] }},{{ hostvars[i2_parent_nodes[0]]['i2_api_port'] }}
       --accept-commands
       --accept-config
       --disable-confd

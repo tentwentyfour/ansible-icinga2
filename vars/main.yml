@@ -12,9 +12,6 @@ i2_default_constants:
 i2_constants: "{{ i2_default_constants | combine(i2_custom_constants) }}"
 i2_features: "{{ i2_custom_features }}"
 
-# Alternative feature implementation (just enable/disable for now)
-i2_alt_features: "{{ i2_custom_alt_features }}"
-
 i2_templates: "{{ i2_custom_templates }}"
 i2_objects: "{{ i2_custom_objects }}"
 i2_apply_rules: "{{ i2_custom_apply_rules }}"
@@ -22,9 +19,10 @@ i2_apply_rules: "{{ i2_custom_apply_rules }}"
 i2_global_templates: "{{ i2_custom_global_templates }}"
 i2_global_objects: "{{ i2_custom_global_objects }}"
 i2_global_apply_rules: "{{ i2_custom_global_apply_rules }}"
-i2_virtual_hosts: "{{ i2_custom_virtual_hosts }}"
 
 i2_ignore_zone_directories: "{{ i2_custom_ignore_zone_directories }}"
+
+i2_configuration_master: "{{ groups[i2_master_group]|sort|first }}"
 
 i2_ca_file: "{{ i2_ca_path }}/ca.crt"
 i2_pki_file: "{{ i2_pki_path }}/{{ i2_hostname }}.crt"

@@ -292,14 +292,14 @@ Default values of `i2_default_constants`:
   ManubulonPluginDir: "{{ i2_lib_dir }}/nagios/plugins"
   PluginContribDir: "{{ i2_lib_dir }}/nagios/plugins"
   NodeName: "{{ ansible_fqdn }}"
-  ZoneName: "{{ ansible_fqdn }}"
+  ZoneName: "{{ i2_zonename }}"
   TicketSalt: ""
 ```
 
 Example usage:
 ```yaml
   vars:
-    - i2_constants:
+    - i2_custom_constants:
         TicketSalt: "My ticket salt"
         Foo: "bar"
 ```

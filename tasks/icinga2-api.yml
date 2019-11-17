@@ -1,25 +1,5 @@
 ---
-- name: Master - Check if Public Key Infrastructure has been initialized
-  become: yes
-  stat:
-    path: "{{ i2_ca_file }}"
-  register: ca_certificate
-
-- name: Master - Create Certificate Authority
-  become: yes
-  command: icinga2 pki new-ca
-  when: (groups['masters']|length == 1 or i2_config_master) and not ca_certificate.stat.exists
-
-- name: Master - Synchronize CA Cert between masters (Fetch)
-  become: yes
-  fetch:
-    src: "{{ i2_ca_path }}/{{ item }}"
-    dest: /tmp/trusted_certs/
-    flat: yes
-  loop: ['ca.crt', 'ca.key']
-  when: (groups['masters']|length > 1 and i2_config_master)
-
-- name: Master - Synchronize CA between masters - (Ensure ca directory exists)
+- name: Master - Ensure CA directory exists
   become: yes
   file:
     path: "{{ i2_ca_path }}"
@@ -27,18 +7,86 @@
     owner: "{{ i2_user }}"
     group: "{{ i2_group }}"
     mode: 0700
-  when: (groups['masters']|length > 1 and not i2_config_master) and not ca_certificate.stat.exists
 
-- name: Master - Synchronize CA between masters - Copy CA
+- name: Master - Create Certificate Authority
   become: yes
-  copy:
-    src: /tmp/trusted_certs/{{ item }}
-    dest: "{{ i2_ca_path }}/"
-    owner: "{{ i2_user }}"
-    group: "{{ i2_group }}"
-    mode: 0644
-  loop: ['ca.crt', 'ca.key']
-  when: (groups['masters']|length > 1 and not i2_config_master) and not ca_certificate.stat.exists
+  command: icinga2 pki new-ca
+  args:
+    creates: "{{ i2_ca_file }}"
+  when: inventory_hostname == i2_configuration_master
+
+- name: Master - Check if Public Key Infrastructure has been initialized
+  become: yes
+  stat:
+    path: "{{ i2_ca_file }}"
+  register: ca_certificate
+
+- name: Master - Synchronize CA Cert between masters
+  when:
+    - groups['masters']|length > 1
+    - not ca_certificate.stat.exists
+  block:
+    - name: Create tmp directory
+      tempfile:
+        state: directory
+      delegate_to: localhost
+      register: i2_local_tmpdir
+      changed_when: no
+      run_once: yes
+      check_mode: no
+      become: no
+
+    - name: Master - Check if Public Key Infrastructure has been initialized
+      become: yes
+      delegate_to: "{{ i2_configuration_master }}"
+      run_once: yes
+      stat:
+        path: "{{ i2_ca_file }}"
+      register: ca_certificate_on_conf_master
+
+    - name: Master - Synchronize CA Cert between masters (Fetch)
+      become: yes
+      delegate_to: "{{ i2_configuration_master }}"
+      run_once: yes
+      check_mode: no
+      fetch:
+        src: "{{ i2_ca_path }}/{{ item }}"
+        dest: "{{ i2_local_tmpdir.path }}/"
+        flat: yes
+      loop: ['ca.crt', 'ca.key']
+      when: ca_certificate_on_conf_master.stat.exists
+
+    - name: Master - Synchronize CA between masters (Copy)
+      become: yes
+      copy:
+        src: "{{ i2_local_tmpdir.path }}/{{ item }}"
+        dest: "{{ i2_ca_path }}/"
+        owner: "{{ i2_user }}"
+        group: "{{ i2_group }}"
+        mode: 0644
+      loop: ['ca.crt', 'ca.key']
+      when: 
+        - ca_certificate_on_conf_master.stat.exists
+        - not ca_certificate.stat.exists
+        - not i2_config_master
+
+  always:
+    - name: Remove the tmp directory
+      file:
+        path: "{{ i2_local_tmpdir.path }}"
+        state: absent
+      delegate_to: localhost
+      changed_when: no
+      run_once: yes
+      check_mode: no
+      become: no
+      when: i2_local_tmpdir.path is defined
+
+- name: Master - Recheck if Public Key Infrastructure has been initialized
+  become: yes
+  stat:
+    path: "{{ i2_ca_file }}"
+  register: ca_certificate
 
 - name: Master - Ensure Certificate directory exists
   become: yes
@@ -57,7 +105,8 @@
     --key {{ i2_pki_path }}/{{ i2_hostname }}.key
     --csr {{ i2_pki_path }}/{{ i2_hostname }}.csr
     --cert {{ i2_pki_path }}/{{ i2_hostname }}.crt
-  when: client_certificate.stat.exists is sameas false
+  args:
+    creates: "{{ i2_pki_path }}/{{ i2_hostname }}.csr"
 
 - name: Master - Sign Host Certificate
   become: yes
@@ -65,7 +114,11 @@
     icinga2 pki sign-csr
     --csr {{ i2_pki_path }}/{{ i2_hostname }}.csr
     --cert {{ i2_pki_path }}/{{ i2_hostname }}.crt
-  when: client_certificate.stat.exists is sameas false
+  args:
+    creates: "{{ i2_pki_path }}/{{ i2_hostname }}.crt"
+  when: ca_certificate.stat.exists
+  notify:
+    - restart icinga2
 
 - name: Master - Link CA into PKI path
   become: yes
@@ -75,7 +128,9 @@
     state: link
     owner: "{{ i2_user }}"
     group: "{{ i2_group }}"
-  when: client_certificate.stat.exists is sameas false
+  when: 
+    - ca_certificate.stat.exists
+    - client_certificate.stat.exists is sameas false
   notify:
     - restart icinga2
 
@@ -87,23 +142,25 @@
     owner: "{{ i2_user }}"
     group: "{{ i2_group }}"
     mode: 0755
-  when: groups['masters']|length == 1 or i2_config_master
+  when: inventory_hostname == i2_configuration_master
 
 - name: Master - Ensure Master Zone directory exists
   become: yes
   file:
-    name: "{{ i2_zones_dir }}/{{ i2_zone }}"
+    name: "{{ i2_zones_dir }}/{{ i2_zonename }}"
     state: directory
     owner: "{{ i2_user }}"
     group: "{{ i2_group }}"
     mode: 0755
-  when: groups['masters']|length == 1 or i2_config_master
+  when: inventory_hostname == i2_configuration_master
 
+# Not sure how to make the location "conf.d" configurable.
+# Blerim made i2_confd an array of locations to be included.
 - name: Master - Create Api-Users config file
   become: yes
   blockinfile:
     create: yes
-    dest: "{{ i2_zones_dir }}/{{ i2_zone }}/api-users.conf"
+    dest: "{{ i2_zones_dir }}/{{ i2_zonename }}/api-users.conf"
     marker: "// {mark} Ansible managed block for {{ item.key }}"
     content: "{{ lookup('template', 'api_users_fragment.j2') }}"
     owner: "{{ i2_user }}"
@@ -111,13 +168,18 @@
     mode: 0644
     directory_mode: 0755
   with_dict: "{{ i2_api_users }}"
-  when: i2_config_master and i2_api_users is defined
-  notify: reload icinga2
+  when:
+    - inventory_hostname == i2_configuration_master
+    - i2_api_users is defined
+  notify:
+    - reload icinga2
 
 - name: Master - Restart Icinga2 Service on Config Master
   service:
     name: icinga2
     state: started
     enabled: yes
-  when: i2_manage_service and i2_config_master
+  when:
+    - inventory_hostname == i2_configuration_master
+    - i2_manage_service
 

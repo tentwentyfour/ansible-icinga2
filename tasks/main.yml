@@ -33,7 +33,9 @@
 
 - name: Set up Icingaweb2
   import_tasks: icinga2-web2.yml
-  when: i2_config_master and i2_setup_webui
+  when:
+    - inventory_hostname == i2_configuration_master
+    - i2_setup_webui
   tags:
     - webui
 
@@ -51,7 +53,7 @@
 
 - name: Set up Icinga Templates, Objects and Apply Rules
   import_tasks: icinga2-objects.yml
-  when: i2_config_master
+  when: inventory_hostname == i2_configuration_master
   tags:
     - objects
 

@@ -1,31 +1,102 @@
 ---
-# Copying role-vars to host-vars
-# Might be replaced by using default() where required,
-# e.g. "hostvars[host]['variabl_key']|default(variable)"
-# but is that actually a better way?
-- name: Set hostname from defaults
-  set_fact:
-    i2_hostname: "{{ i2_hostname }}"
+# When a --limit is in place only the facts of
+# the selected hosts are retrieved and we need
+# the facts of the other nodes as they are
+# used as defaults of variables used in the
+# templates
+- name: Gather Facts of the other Icinga nodes
+  setup:
+  run_once: True
+  delegate_facts: True
+  delegate_to: "{{ item }}"
+  loop: >-
+    {{ groups[i2_master_group]|default([])
+    + groups[i2_satellite_group]|default([])
+    + groups[i2_agent_group]|default([]) }}
+  when: hostvars[item].ansible_fqdn is not defined
 
-- name: Set zonename from defaults
+ # Copying role-vars to host-vars
+ # We do this in a loop over all the nodes as we
+ # need the variables of other nodes in the templates
+ # which we don't get if a --limit is in place
+- name: Set default hostvars for Icinga2 masters
   set_fact:
-    i2_zonename: "{{ i2_zonename }}"
+    i2_master: >-
+      {{ hostvars[item].i2_master|default(True) }}
+    i2_satellite: >-
+      {{ hostvars[item].i2_satellite|default(False) }}
+  run_once: True
+  delegate_facts: True
+  delegate_to: "{{ item }}"
+  loop: "{{ groups[i2_master_group]|default([]) }}"
 
-- name: Determine configuration master node name
+- name: Set default hostvars for Icinga2 satellites
   set_fact:
-    configuration_master: "{{ groups[i2_master_group][0] }}"
+    i2_master: >-
+      {{ hostvars[item].i2_master|default(False) }}
+    i2_satellite: >-
+      {{ hostvars[item].i2_satellite|default(True) }}
+    i2_parent_zone: >-
+      {{ hostvars[item].i2_parent_zone|default('master') }}
+  run_once: True
+  delegate_facts: True
+  delegate_to: "{{ item }}"
+  loop: "{{ groups[i2_satellite_group]|default([]) }}"
 
-- name: Copy custom templates into hostvars
+- name: Set default hostvars for all Icinga nodes
   set_fact:
-    i2_templates: "{{ i2_templates }}"
+    i2_address: >-
+      {{ hostvars[item].i2_address|default(hostvars[item].ansible_facts.default_ipv4.address) }}
+    i2_api_port: >-
+      {{ hostvars[item].i2_api_port|default(i2_api_port) }}
+    i2_api_host: >-
+      {{ hostvars[item].i2_api_host|default(hostvars[item].ansible_facts.default_ipv4.address) }}
+    i2_hostname: >-
+      {{ hostvars[item].i2_hostname|default(hostvars[item].ansible_fqdn) }}
+    i2_zonename: >-
+      {{ hostvars[item].i2_zonename|default(hostvars[item].ansible_fqdn) }}
+    i2_templates: >-
+      {{ hostvars[item].i2_custom_templates|default({}) }}
+    i2_objects: >-
+      {{ hostvars[item].i2_custom_objects|default({}) }}
+    i2_apply_rules: >-
+      {{ hostvars[item].i2_custom_apply_rules|default({}) }}
+  run_once: True
+  delegate_facts: True
+  delegate_to: "{{ item }}"
+  loop: >-
+    {{ groups[i2_master_group]|default([])
+    + groups[i2_satellite_group]|default([])
+    + groups[i2_agent_group]|default([]) }}
 
-- name: Copy custom objects into hostvars
+- name: Determine child nodes
   set_fact:
-    i2_objects: "{{ i2_objects }}"
+    i2_peer_nodes: >-
+      {{ hostvars | dict2items
+      | json_query("[?value.i2_zonename==" + "'" + i2_zonename + "'].key")
+      | sort }}
 
-- name: Copy custom apply rules into hostvars
+- name: Determine parent and child nodes
   set_fact:
-    i2_apply_rules: "{{ i2_apply_rules }}"
+    i2_child_nodes: >-
+      {{ hostvars | dict2items
+      | json_query("[?value.i2_parent_zone==" + "'" + i2_zonename + "'].key")
+      | difference(i2_peer_nodes)
+      | sort }}
+    i2_child_zones: >-
+      {{ hostvars | dict2items | map(attribute='value') | list
+      | json_query("[?i2_parent_zone==" + "'" + i2_zonename + "'].i2_zonename")
+      | unique
+      | difference([i2_zonename])
+      | sort }}
+    i2_parent_nodes: >-
+      {%- if i2_parent_zone is defined -%}
+      {{ hostvars | dict2items
+      | json_query("[?value.i2_zonename==" + "'" + i2_parent_zone + "'].key")
+      | difference(i2_peer_nodes)
+      | sort
+      }}
+      {%- else %}[]{% endif -%}
 
 - name: RedHat - Check if User desires specific package version
   set_fact:
@@ -56,7 +127,7 @@
     openssl x509 -in {{ i2_pki_file }} -noout -text | grep Issuer
   register: certificate_authority
   ignore_errors: yes
-  when: client_certificate.stat.exists
+  when: not i2_master and client_certificate.stat.exists
   tags:
     - nodes
     - config
@@ -75,6 +146,3 @@
   command: /usr/sbin/getenforce
   register: selinux
   when: ansible_os_family == 'RedHat'
-  tags:
-    - ido
-    - webui

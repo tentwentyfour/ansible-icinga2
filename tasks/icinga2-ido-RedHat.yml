@@ -34,7 +34,9 @@
     source: "{{ hostvars[i2_peer_nodes[0]].ansible_facts.default_ipv4.address }}/32"
     state: enabled
     permanent: yes
-  when: i2_config_master and i2_manage_firewall
+  when:
+    - inventory_hostname == i2_configuration_master
+    - i2_manage_firewall
 
 - name: Restart firewalld
   become: yes

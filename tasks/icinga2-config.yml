@@ -71,7 +71,9 @@
     group: "{{ i2_group }}"
     mode: 0644
     backup: "{{ i2_keep_backups }}"
-  when: i2_master or i2_certificate_signed_by_ca or not i2_connection_allowed
+  when: 
+    - i2_master or i2_certificate_signed_by_ca 
+    - not i2_connection_allowed
   notify: reload icinga2
 
 # "icinga2 node setup" takes care of this for us on first-run, but only on nodes

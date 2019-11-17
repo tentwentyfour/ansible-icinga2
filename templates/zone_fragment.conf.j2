@@ -5,13 +5,13 @@ object Endpoint "{{ hostvars[item].i2_hostname }}" {
   See peer_zone_fragment.conf.j2
 #}
 {% if i2_connection_direction == 'top-down' %}
-  host = "{{ hostvars[item].ansible_facts.default_ipv4.address }}"
+  host = "{{ hostvars[item].i2_api_host }}"
   port = "{{ i2_api_port }}"
 {% endif %}
 }
 
 object Zone "{{ hostvars[item].i2_zonename }}" {
-{% if hostvars[item].i2_zone is defined and hostvars[item].i2_zone != item %}
+{% if hostvars[item].i2_parent_zone is defined and hostvars[item].i2_parent_zone != item %}
   parent = "{{ hostvars[item].i2_zone }}"
 {% endif %}
   endpoints = [ "{{ hostvars[item].i2_hostname }}" ]

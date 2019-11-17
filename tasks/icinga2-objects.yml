@@ -1,22 +1,13 @@
 ---
-- name: Create Zone and per-zone Host Directories
-  become: yes
-  file:
-    name: "{{ i2_zones_dir }}/{{ hostvars[item].i2_zonename }}/hosts"
-    state: directory
-    owner: "{{ i2_user }}"
-    group: "{{ i2_group }}"
-    mode: 0755
-  loop: "{{ groups[i2_satellite_group] + groups[i2_master_group] }}"
-
-# Warning: This will result in duplicate path entries if
-# e.g. you have a ha-master or ha-satellite setup.
 - name: Collect all Zones
   set_fact:
-    used_zones: "{{ used_zones|default([ i2_global_dir ])
+    used_zones: "{{ ( used_zones|default([ i2_global_dir ])
       + [ i2_zones_dir + '/' + hostvars[item].i2_zonename ]
-    }}"
-  loop: "{{ groups[i2_satellite_group] + groups[i2_master_group] }}"
+      )|unique
+      }}"
+  loop: >-
+    {{ groups[i2_satellite_group]|default([])
+    + groups[i2_master_group]|default([]) }}
 
 # We ignore some files:
 # - By default, api-users.conf and endpoints.conf created elsewhere
@@ -33,6 +24,16 @@
   when:
     - i2_remove_unmanaged_objects
     - i2_ignore_zone_directories|length > 0
+
+- name: Create Zone and per-zone Host Directories
+  become: yes
+  file:
+    name: "{{ item }}/hosts"
+    state: directory
+    owner: "{{ i2_user }}"
+    group: "{{ i2_group }}"
+    mode: 0755
+  loop: "{{ used_zones }}"
 
 - name: Collect all pre-existing objects
   become: yes
@@ -110,7 +111,8 @@
     owner: "{{ i2_user }}"
     group: "{{ i2_group }}"
     mode: 0644
-  loop: "{{ groups[i2_satellite_group] + [configuration_master] }}"
+  loop: >-
+    {{ groups[i2_satellite_group]|default([]) + [i2_configuration_master] }}
   register: managed_zone_templates
   notify:
     - reload icinga2
@@ -123,7 +125,8 @@
     owner: "{{ i2_user }}"
     group: "{{ i2_group }}"
     mode: 0644
-  loop: "{{ groups[i2_satellite_group] + [configuration_master] }}"
+  loop: >-
+    {{ groups[i2_satellite_group]|default([]) + [i2_configuration_master] }}
   register: managed_zone_objects
   notify:
     - reload icinga2
@@ -136,7 +139,8 @@
     owner: "{{ i2_user }}"
     group: "{{ i2_group }}"
     mode: 0644
-  loop: "{{ groups[i2_satellite_group] + [configuration_master] }}"
+  loop: >-
+    {{ groups[i2_satellite_group]|default([]) + [i2_configuration_master] }}
   register: managed_zone_apply_rules
   notify:
     - reload icinga2
@@ -145,14 +149,17 @@
   become: yes
   template:
     src: host-template.conf.j2
-    dest: "{{ i2_zones_dir }}/{{ hostvars[item]['i2_zone'] }}/hosts/{{ hostvars[item]['i2_hostname'] }}.conf"
+    dest: "{{ i2_zones_dir }}/{{
+        hostvars[item]['i2_parent_zone']|default(hostvars[item]['i2_zonename'])
+      }}/hosts/{{ hostvars[item]['i2_hostname'] }}.conf"
     owner: "{{ i2_user }}"
     group: "{{ i2_group }}"
     mode: 0644
   loop: "{{ groups['all'] }}"
   register: managed_zone_hosts
   when:
-    - hostvars[item].i2_zone is defined
+    - hostvars[item].i2_parent_zone is defined or
+      (hostvars[item].i2_master is defined and hostvars[item].i2_master)
     - hostvars[item].i2_hostname is defined
   notify:
     - reload icinga2
