@@ -3,6 +3,7 @@ i2_manage_repository: yes
 i2_manage_package: yes
 i2_manage_service: yes
 i2_manage_firewall: yes
+i2_manage_epel: yes
 
 i2_package_name: icinga2
 i2_package_version: ""
@@ -12,11 +13,7 @@ i2_apt_key: "https://packages.icinga.com/icinga.key"
 i2_apt_url: "deb http://packages.icinga.com/{{ ansible_lsb.id|lower }} icinga-{{ ansible_distribution_release }} main"
 i2_yum_key: "https://packages.icinga.com/icinga.key"
 i2_yum_url: "http://packages.icinga.com/epel/$releasever/release/"
-i2_manage_package: yes
-i2_manage_service: yes
-i2_manage_epel: yes
-i2_setup_ido: no
-i2_keep_backups: yes
+
 
 i2_confd:
   - "conf.d"
@@ -40,6 +37,7 @@ i2_custom_global_objects: {}
 i2_custom_global_apply_rules: {}
 i2_custom_virtual_hosts: {}
 
+i2_keep_backups: yes
 i2_remove_unmanaged_features: no
 i2_remove_unmanaged_objects: no
 i2_remove_unmanaged_objects_in_zone: no

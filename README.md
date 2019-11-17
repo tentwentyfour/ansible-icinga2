@@ -186,7 +186,6 @@ In this section, we'll see how to
     - [Variable: i2_custom_global_objects](#variable-i2_custom_global_objects)
     - [Variable: i2_custom_global_apply_rules](#variable-i2_custom_global_apply_rules)
     - [Variable: i2_custom_ignore_zone_directories](#variable-i2_ignore_zone_directories)
-    - [Variable: i2_remove_unmanaged_features](#variable-i2_remove_unmanaged_features)
     - [Variable: i2_remove_unmanaged_objects](#variable-i2_remove_unmanaged_objects)
 - [**Distributed Monitoring**](#distributed-monitoring)
     - [Variable: i2_master](#variable-i2_master)
@@ -323,20 +322,29 @@ Lib dir. Default depends on OS.
 ### Feature Usage
 
 #### Variable: `i2_custom_features`
-Features are maintained over the dictionary `i2_custom_features`.
-By default features won't be managed until `i2_custom_features` has further values.
+Features are maintained via the dictionary `i2_custom_features`.
+By default features won't be managed by ansible unless `i2_custom_features` is non-empty.
+
+There exist two levels of feature management, simple (de)-activation and activation including further customization:
+- To enable or disable a feature for which configuration exists within the `features-available` directory, you may simply pass `yes` or `no`.
+- To further customize a feature, that is create or modify the configuration in `features-available` and then activate it, supply a hash consisting of `type` and `attributes` keys as in the following example:
 
 Example usage:
 
 ```yaml
 vars:
   - i2_custom_features:
-    ApiListener:                #ObjectType
-      api:                      #ObjectName
-        accept_command: true    #ObjectAttribute
-        accept_config: true     #ObjectAttribute
-    GraphiteWriter:
-      graphite:
+    debuglog: no                # Disable available feature
+    checker: yes                # Enable available feature
+    # Customize and enable features:
+    api:                        # ObjectName
+      type: ApiListener         # ObjectType
+      attributes:
+        accept_command: true    # ObjectAttribute
+        accept_config: true     # ObjectAttribute
+    graphite:
+      type: GraphiteWriter
+      attributes:
         host: "127.0.0.1"
         port: "2004"
 ```

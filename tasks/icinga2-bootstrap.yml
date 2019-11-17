@@ -4,10 +4,11 @@
 # the facts of the other nodes as they are
 # used as defaults of variables used in the
 # templates
-- name: Gather Facts of the other Icinga nodes
+- name: Gather facts of the other Icinga nodes
   setup:
-  run_once: True
-  delegate_facts: True
+  ignore_errors: yes
+  run_once: yes
+  delegate_facts: yes
   delegate_to: "{{ item }}"
   loop: >-
     {{ groups[i2_master_group]|default([])
@@ -25,8 +26,8 @@
       {{ hostvars[item].i2_master|default(True) }}
     i2_satellite: >-
       {{ hostvars[item].i2_satellite|default(False) }}
-  run_once: True
-  delegate_facts: True
+  run_once: yes
+  delegate_facts: yes
   delegate_to: "{{ item }}"
   loop: "{{ groups[i2_master_group]|default([]) }}"
 
@@ -38,12 +39,12 @@
       {{ hostvars[item].i2_satellite|default(True) }}
     i2_parent_zone: >-
       {{ hostvars[item].i2_parent_zone|default('master') }}
-  run_once: True
-  delegate_facts: True
+  run_once: yes
+  delegate_facts: yes
   delegate_to: "{{ item }}"
   loop: "{{ groups[i2_satellite_group]|default([]) }}"
 
-- name: Set default hostvars for all Icinga nodes
+- name: Set default hostvars for all Icinga2 nodes
   set_fact:
     i2_address: >-
       {{ hostvars[item].i2_address|default(hostvars[item].ansible_facts.default_ipv4.address) }}
@@ -61,9 +62,10 @@
       {{ hostvars[item].i2_custom_objects|default({}) }}
     i2_apply_rules: >-
       {{ hostvars[item].i2_custom_apply_rules|default({}) }}
-  run_once: True
-  delegate_facts: True
+  run_once: yes
+  delegate_facts: yes
   delegate_to: "{{ item }}"
+  ignore_errors: yes
   loop: >-
     {{ groups[i2_master_group]|default([])
     + groups[i2_satellite_group]|default([])

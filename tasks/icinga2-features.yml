@@ -9,35 +9,6 @@
   when:
     - i2_remove_unmanaged_features
 
-- name: Generate enabled feature configuration
-  become: yes
-  template:
-    src: templates/feature-generic-template.conf.j2
-    dest: "{{ i2_features_available_dir }}/{{ feature_name }}.conf"
-    owner: "{{ i2_user }}"
-    group: "{{ i2_group }}"
-    mode: 0644
-  vars:
-   feature_name: >-
-     {{ item.value.keys()|difference(['library'])|first|default(item.key) }}
-  with_dict: "{{ i2_features }}"
-  register: managed_features
-  notify:
-    - restart icinga2
-
-- name: Enable feature configuration
-  become: yes
-  icinga2_feature:
-    name: "{{ feature_name }}"
-    state: present
-  vars:
-   feature_name: >-
-     {{ item.value.keys()|difference(['library'])|first|default(item.key) }}
-  with_dict: "{{ i2_features }}"
-  register: managed_features
-  notify:
-    - restart icinga2
-
 - name: Set fact enabled_files
   set_fact:
     enabled_files: "{{ enabled_files|default([]) + [ item.path ] }}"
@@ -45,11 +16,27 @@
   when:
     - i2_remove_unmanaged_features
 
-- name: Set Fact managed_features_files
+- name: Generate enabled feature configuration
+  become: yes
+  template:
+    src: templates/feature-template.conf.j2
+    dest: "{{ i2_features_available_dir }}/{{ item.key }}.conf"
+    owner: "{{ i2_user }}"
+    group: "{{ i2_group }}"
+    mode: 0644
+  with_dict: "{{ i2_features }}"
+  when:
+    - item.value.attributes is defined
+  register: managed_features
+  notify:
+    - restart icinga2
+
+- name: Set fact managed_features_files
   set_fact:
-    managed_feature_files: "{{ managed_feature_files|default([]) + [item.dest] }}"
+    managed_feature_files: "{{ managed_feature_files|default([]) + [ item.dest ] }}"
   with_items: "{{ managed_features.results }}"
   when:
+    - item.dest is defined
     - i2_remove_unmanaged_features
 
 - name: Remove unmanaged features
@@ -58,4 +45,14 @@
     state: absent
   with_items: "{{ enabled_files|default([]) }}"
   when:
-    - item not in managed_feature_files and i2_remove_unmanaged_features
+    - item not in managed_feature_files
+    - i2_remove_unmanaged_features
+
+- name: Enable feature configuration
+  become: yes
+  icinga2_feature:
+    name: "{{ item.key }}"
+    state: "{{ 'absent' if item.value is sameas false else 'present' }}"
+  with_dict: "{{ i2_features }}"
+  notify:
+    - restart icinga2

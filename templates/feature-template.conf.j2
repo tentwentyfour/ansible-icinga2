@@ -1,0 +1,8 @@
+// {{ ansible_managed }}
+{% import 'object_attributes.j2' as attributes %}
+
+object {{ item.value.type }} "{{ item.key }}" {
+{% if item.value.attributes is mapping -%}
+{{ attributes.attrs(item.value.attributes) -}}
+{% endif %}
+}
