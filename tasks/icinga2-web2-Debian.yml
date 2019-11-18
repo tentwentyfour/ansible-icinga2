@@ -8,6 +8,7 @@
       - php-imagick
       - libapache2-mod-php
     state: present
+  notify: restart apache2
 
 - name: IcingaWeb2 – Get PHP version
   command: php --version
@@ -21,6 +22,7 @@
 - name: IcingaWeb2 – Enable PHP apache module
   apache2_module:
     name: "php{{ php_version }}"
+  notify: restart apache2
 
 - name: Debian – IcingaWeb2 – Set timezone in php.ini
   lineinfile:
