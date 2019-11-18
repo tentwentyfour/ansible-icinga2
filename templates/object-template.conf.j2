@@ -1,7 +1,7 @@
 // {{ ansible_managed }}
 {% import 'item_definitions.j2' as definitions %}
 {% if hostvars[item].i2_objects is defined -%}
-{% for item in hostvars[item].i2_objects -%}
+{% for item in hostvars[item].i2_objects|dict2items -%}
   {{ definitions.object(item) }}
 {% endfor %}
 {% endif %}
