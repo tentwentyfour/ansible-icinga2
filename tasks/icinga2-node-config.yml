@@ -68,7 +68,7 @@
     - not i2_certificate_signed_by_ca
   notify: restart icinga2
 
-- name: Collect endpoints for bottom-up config
+- name: Nodes - Collect endpoints for bottom-up config
   set_fact:
     endpoints: "{{ endpoints|default('') }}
      --endpoint {{ hostvars[item]['i2_hostname'] }},{{ hostvars[item]['i2_api_host'] }},{{ hostvars[item]['i2_api_port'] }}"
@@ -78,7 +78,7 @@
     - i2_connection_direction == 'bottom-up'
     - not i2_certificate_signed_by_ca
 
-- name: Generate client certificate on master
+- name: Nodes - Generate client certificate on master
   become: yes
   command: >
     icinga2 pki new-cert --cn {{ i2_hostname }}
@@ -89,7 +89,7 @@
     - not i2_certificate_signed_by_ca
     - not i2_connection_allowed
 
-- name: Sign client certificates on master
+- name: Nodes - Sign client certificates on master
   become: yes
   command: >
     icinga2 pki sign-csr --csr {{ i2_pki_path }}/{{ i2_hostname }}.csr
@@ -99,7 +99,7 @@
     - not i2_certificate_signed_by_ca
     - not i2_connection_allowed
 
-- name: Fetch public ca from master
+- name: Nodes - Fetch public CA from master
   fetch:
     src: "{{ i2_pki_path }}/ca.crt"
     dest: buffer/
@@ -110,7 +110,7 @@
     - not i2_certificate_signed_by_ca
     - not i2_connection_allowed
 
-- name: Fetch node certificates from Master
+- name: Nodes - Fetch node certificates from Master
   fetch:
     src: "{{ i2_pki_path }}/{{ item }}"
     dest: buffer/
@@ -121,7 +121,7 @@
     - not i2_certificate_signed_by_ca
     - not i2_connection_allowed
 
-- name: Copy ca to node
+- name: Nodes - Copy CA to node
   copy:
     src: "buffer/ca.crt"
     dest: "{{ i2_pki_path }}/ca.crt"
@@ -129,7 +129,7 @@
     - not i2_certificate_signed_by_ca
     - not i2_connection_allowed
 
-- name: Copy certificates to respective node
+- name: Nodes - Copy certificates to respective node
   copy:
     src: "buffer/{{ item }}"
     dest: "{{ i2_pki_path }}/"
@@ -138,14 +138,6 @@
     - not i2_certificate_signed_by_ca
     - not i2_connection_allowed
   notify: reload icinga2
-
-- name: Ensure state of features on nodes
-  become: yes
-  shell: >
-    icinga2 feature enable {{ item }}
-  loop: "{{ i2_alt_features }}"
-  when:
-    - not i2_connection_allowed
 
 - name: Nodes - Retrieve signed certificate and set-up agent (Bottom-Up)
   become: yes

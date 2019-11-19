@@ -5,14 +5,14 @@
     paths: "{{ i2_features_enabled_dir }}/"
     patterns: '*.conf'
     file_type: any
-  register: enabled_features
+  register: feature_lookup
   when:
     - i2_remove_unmanaged_features
 
-- name: Set fact enabled_files
+- name: Set fact enabled_features
   set_fact:
-    enabled_files: "{{ enabled_files|default([]) + [ item.path ] }}"
-  loop: "{{ enabled_features.files }}"
+    enabled_features: "{{ enabled_features|default([]) + [ item.path|regex_replace('^\/etc\/icinga2\/features-enabled\/(.*).conf$', '\\1') ] }}"
+  loop: "{{ feature_lookup.files }}"
   when:
     - i2_remove_unmanaged_features
 
@@ -27,26 +27,18 @@
   with_dict: "{{ i2_features }}"
   when:
     - item.value.attributes is defined
-  register: managed_features
+  register: generated_features
   notify:
     - restart icinga2
 
-- name: Set fact managed_features_files
+- name: Set features to disable (remove)
   set_fact:
-    managed_feature_files: "{{ managed_feature_files|default([]) + [ item.dest ] }}"
-  with_items: "{{ managed_features.results }}"
+    i2_features: "{{ i2_features|default({}) | combine({ item: false }) }}"
+  loop: "{{ enabled_features }}"
   when:
-    - item.dest is defined
+    - enabled_features is defined
     - i2_remove_unmanaged_features
-
-- name: Remove unmanaged features
-  file:
-    path: "{{ item }}"
-    state: absent
-  with_items: "{{ enabled_files|default([]) }}"
-  when:
-    - item not in managed_feature_files
-    - i2_remove_unmanaged_features
+    - item not in i2_features
 
 - name: Enable feature configuration
   become: yes

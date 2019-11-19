@@ -71,8 +71,8 @@
     group: "{{ i2_group }}"
     mode: 0644
     backup: "{{ i2_keep_backups }}"
-  when: 
-    - i2_master or i2_certificate_signed_by_ca 
+  when:
+    - i2_master or i2_certificate_signed_by_ca
     - not i2_connection_allowed
   notify: reload icinga2
 
@@ -132,10 +132,3 @@
     - i2_config_master
     - hostvars[item].i2_hostname is defined
   notify: reload icinga2
-
-- name: Ensure state of features on masters
-  become: yes
-  shell: >
-    icinga2 feature enable {{ item }}
-  loop: "{{ i2_alt_features }}"
-  when: i2_master or i2_certificate_signed_by_ca or not i2_connection_allowed
